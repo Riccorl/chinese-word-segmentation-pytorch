@@ -16,7 +16,7 @@ class Predictor:
         self.softmax_fn = torch.nn.Softmax(dim=-1)
         self.model = ChineseSegmenter.load_from_checkpoint(model_path)
         self.tokenizer = tr.BertTokenizer.from_pretrained(
-            self.model.hparam.language_model, tokenize_chinese_chars=True
+            self.model.language_model, tokenize_chinese_chars=True
         )
         self.model_max_length = self.tokenizer.model_max_length
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
