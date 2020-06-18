@@ -11,13 +11,13 @@ from models import ChineseSegmenter
 
 
 class Predictor:
-    def __init__(self, model_path, hparams=None):
+    def __init__(self, model_path):
         self.bies_dict = {1: "B", 2: "I", 3: "E", 4: "S"}
         self.softmax_fn = torch.nn.Softmax(dim=-1)
-        self.model = ChineseSegmenter.load_from_checkpoint(model_path, hparams_file=hparams)
+        self.model = ChineseSegmenter.load_from_checkpoint(model_path)
         print(self.model)
         self.tokenizer = tr.BertTokenizer.from_pretrained(
-            self.model.hparam.language_model, tokenize_chinese_chars=True
+            self.model.hparams.language_model, tokenize_chinese_chars=True
         )
         self.model_max_length = self.tokenizer.model_max_length
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -61,11 +61,10 @@ def parse_args():
     parser.add_argument("input_file", help="The path of the input file")
     parser.add_argument("output_path", help="The path of the output file")
     parser.add_argument("model_path", help="The path of the model")
-    parser.add_argument("--hparams", help="The path of the parameters")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    predictor = Predictor(args.model_path, args.hparams)
+    predictor = Predictor(args.model_path)
     predictor.predict(args.input_path, args.output_path)
