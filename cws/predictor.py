@@ -15,7 +15,6 @@ class Predictor:
         self.bies_dict = {1: "B", 2: "I", 3: "E", 4: "S"}
         self.softmax_fn = torch.nn.Softmax(dim=-1)
         self.model = ChineseSegmenter.load_from_checkpoint(model_path)
-        print(self.model)
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             self.model.hparams.language_model, tokenize_chinese_chars=True
         )
