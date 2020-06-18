@@ -126,7 +126,7 @@ class ChineseSegmenter(pl.LightningModule):
             "--batch_size", help="size of the batch", type=int, default=32
         )
         parser.add_argument(
-            "--lr", help="starting learning rate", type=float, default=0.01
+            "--lr", help="starting learning rate", type=float
         )
         parser.add_argument(
             "--mode",

@@ -20,7 +20,12 @@ if __name__ == "__main__":
         monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min"
     )
     model = ChineseSegmenter(hparams)
+
     trainer = pl.Trainer.from_argparse_args(
         hparams, early_stop_callback=early_stop_callback
     )
+    # Run learning rate finder
+    if not model.hparams.lr:
+        lr_finder = trainer.lr_find(model)
+        model.hparams.lr = lr_finder.suggestion()
     trainer.fit(model)
