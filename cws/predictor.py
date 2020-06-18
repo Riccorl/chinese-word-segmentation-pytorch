@@ -58,7 +58,7 @@ class Predictor:
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("input_file", help="The path of the input file")
-    parser.add_argument("output_path", help="The path of the output file")
+    parser.add_argument("output_file", help="The path of the output file")
     parser.add_argument("model_path", help="The path of the model")
     return parser.parse_args()
 
@@ -66,4 +66,4 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     predictor = Predictor(args.model_path)
-    predictor.predict(args.input_path, args.output_path)
+    predictor.predict(args.input_file, args.output_file)
