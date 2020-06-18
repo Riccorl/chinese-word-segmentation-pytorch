@@ -13,6 +13,7 @@ class Dataset(torch.utils.data.Dataset):
     ):
         self.bies_dict = {"B": 1, "I": 2, "E": 3, "S": 4}
         self.file_path = file_path
+        print(file_path)
         # self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             language_model, tokenize_chinese_chars=True

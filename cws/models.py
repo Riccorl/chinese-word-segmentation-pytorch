@@ -1,58 +1,45 @@
+from argparse import ArgumentParser
+
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import transformers as tr
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+import transformers as tr
 from torch.utils.data import DataLoader
 
 from dataset import Dataset
 
 
 class ChineseSegmenter(pl.LightningModule):
-    def __init__(
-        self,
-        input_file: str,
-        hidden_size: int = 512,
-        num_layers: int = 2,
-        max_length: int = 200,
-        batch_size: int = 32,
-        language_model: str = "bert-base-chinese",
-    ):
+    def __init__(self, hparams, *args, **kwargs):
         super(ChineseSegmenter, self).__init__()
-
-        # params
-        self.lr = 0.001
-        self.batch_size = batch_size
-        # pl code
-        self.batch_size = batch_size
-        self.data = self._load_data(input_file, language_model, max_length)
-        self.train_set, self.val_set = self._split_data(self.data)
+        self.hparams = hparams
+        self.save_hyperparameters(self.hparams)
         self.criterion = nn.CrossEntropyLoss(ignore_index=0)
-
         # model definition
-        # config = tr.BertConfig.from_pretrained(
-        #     language_model, output_hidden_states=True
-        # )
         self.lmodel = tr.BertModel.from_pretrained(
-            language_model, output_hidden_states=True
+            self.hparams.language_model, output_hidden_states=True
         )
         self.lstms = nn.LSTM(
             self.lmodel.config.hidden_size * 4,
-            hidden_size,
-            num_layers=num_layers,
+            self.hparams.hidden_size,
+            num_layers=self.hparams.num_layers,
             dropout=0.4,
             bidirectional=True,
         )
         self.dropouts = nn.Dropout(0.5)
-        self.output = nn.Linear(hidden_size * 2, 5)
+        self.output = nn.Linear(self.hparams.hidden_size * 2, 5)
 
     def forward(self, inputs, **kwargs):
         x = self.lmodel(
             inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
         )[2][-4:]
-        # x = torch.stack(x, dim=0).sum(dim=0)
-        x = torch.cat(x, dim=-1)
+        if self.hparams.mode == "concat":
+            x = torch.cat(x, dim=-1)
+        elif self.hparams.mode == "sum":
+            x = torch.stack(x, dim=0).sum(dim=0)
+        else:
+            raise ValueError('Mode not supported, chose between "concat" and "sum"')
         x, _ = self.lstms(x)
         x = self.output(x)
         return x
@@ -79,8 +66,14 @@ class ChineseSegmenter(pl.LightningModule):
         results = {"progress_bar": logs}
         return results
 
+    def prepare_data(self):
+        data = self._load_data(
+            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
+        )
+        self.train_set, self.val_set = self._split_data(data)
+
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, patience=3, verbose=True
         )
@@ -96,7 +89,7 @@ class ChineseSegmenter(pl.LightningModule):
 
     def _get_loader_params(self, train=True):
         return {
-            "batch_size": self.batch_size,
+            "batch_size": self.hparams.batch_size,
             "shuffle": train,
             "num_workers": 3,
             "collate_fn": Dataset.generate_batch,
@@ -113,3 +106,37 @@ class ChineseSegmenter(pl.LightningModule):
         print("Train size:", train_len)
         print("Val size:", val_len)
         return torch.utils.data.random_split(data, [train_len, val_len])
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument(
+            "--input_file", help="The path of the input file", required=True
+        )
+        parser.add_argument(
+            "--hidden_size", help="LSTM hidden size", type=int, default=512
+        )
+        parser.add_argument(
+            "--num_layers", help="number of LSTM layers", type=int, default=2
+        )
+        parser.add_argument(
+            "--max_len", help="max sentence length", type=int, default=150
+        )
+        parser.add_argument(
+            "--batch_size", help="size of the batch", type=int, default=32
+        )
+        parser.add_argument(
+            "--lr", help="starting learning rate", type=float, default=0.01
+        )
+        parser.add_argument(
+            "--mode",
+            help="bert output mode",
+            default="concat",
+            choices=["concat", "sum"],
+        )
+        parser.add_argument(
+            "--language_model",
+            help="language model to use",
+            default="bert-base-chinese",
+        )
+        return parser
