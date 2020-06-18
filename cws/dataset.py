@@ -13,8 +13,10 @@ class Dataset(torch.utils.data.Dataset):
     ):
         self.bies_dict = {"B": 1, "I": 2, "E": 3, "S": 4}
         self.file_path = file_path
-        self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
-        # self.tokenizer = tr.BertTokenizer.from_pretrained(language_model)
+        # self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
+        self.tokenizer = tr.BertTokenizer.from_pretrained(
+            language_model, tokenize_chinese_chars=True
+        )
         self.max_length = max_length
         self.features, self.labels = self.process_data()
 
@@ -46,7 +48,6 @@ class Dataset(torch.utils.data.Dataset):
             return_attention_mask=True,
             max_length=max_length,
             pad_to_max_length=True,
-            return_tensor="pt",
         )
         return inputs.data
 
@@ -72,12 +73,12 @@ class Dataset(torch.utils.data.Dataset):
         labels_file = filename + "_bies." + ext
         print("Features file:", features_file)
         print("Labels file:", labels_file)
-        features = self._read_dataset(features_file)
-        labels = self._read_dataset(labels_file)
+        features = self.read_dataset(features_file)
+        labels = self.read_dataset(labels_file)
         return features, labels
 
     @staticmethod
-    def _read_dataset(filename: str) -> List[str]:
+    def read_dataset(filename: str) -> List[str]:
         """
         Read the dataset line by line.
         :param filename: file to read
