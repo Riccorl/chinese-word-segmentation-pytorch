@@ -4,3 +4,6 @@
 
 ### Architecture
 The baseline architecture is based on the work of [Ma et al.](https://aclweb.org/anthology/D18-1529)
+
+### Param
+LR = 0.000524
