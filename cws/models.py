@@ -15,6 +15,7 @@ class ChineseSegmenter(pl.LightningModule):
         super(ChineseSegmenter, self).__init__()
         self.hparams = hparams
         self.save_hyperparameters(self.hparams)
+
         self.criterion = nn.CrossEntropyLoss(ignore_index=0)
         # model definition
         self.lmodel = tr.BertModel.from_pretrained(
@@ -67,10 +68,12 @@ class ChineseSegmenter(pl.LightningModule):
         return results
 
     def prepare_data(self):
-        data = self._load_data(
+        self.data = self._load_data(
             self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
         )
-        self.train_set, self.val_set = self._split_data(data)
+
+    def setup(self, stage: str):
+        self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
@@ -91,7 +94,7 @@ class ChineseSegmenter(pl.LightningModule):
         return {
             "batch_size": self.hparams.batch_size,
             "shuffle": train,
-            "num_workers": 3,
+            "num_workers": 6,
             "collate_fn": Dataset.generate_batch,
         }
 
@@ -125,9 +128,7 @@ class ChineseSegmenter(pl.LightningModule):
         parser.add_argument(
             "--batch_size", help="size of the batch", type=int, default=32
         )
-        parser.add_argument(
-            "--lr", help="starting learning rate", type=float
-        )
+        parser.add_argument("--lr", help="starting learning rate", type=float)
         parser.add_argument(
             "--mode",
             help="bert output mode",
