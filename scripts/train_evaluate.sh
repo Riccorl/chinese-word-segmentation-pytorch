@@ -7,9 +7,13 @@ source /home/ric/miniconda3/bin/activate pt
 # gold file "/home/ric/external/datadrive/Datasets/chinese-word-seg/processed/gold/pku_test_gold.utf8"
 # dict file for score "/home/ric/external/datadrive/Datasets/chinese-word-seg/processed/gold/pku_training_words.utf8"
 # language model
-#   - "clue/roberta_chinese_clue_tiny"
-#   - "adamlin/bert-distil-chinese"
-#   - "best-base-chinese"
+#   - clue/roberta_chinese_clue_tiny
+#   - adamlin/bert-distil-chinese
+#   - best-base-chinese
+#   - voidful/albert_chinese_base
+#   - voidful/albert_chinese_small
+#   - voidful/albert_chinese_tiny
+#   - hfl/chinese-roberta-wwm-ext
 
 # variables
 BASE_PATH="/home/ric/external/datadrive/Datasets/chinese-word-seg/processed"
@@ -23,7 +27,7 @@ EPOCHS=30
 BATCH_SIZE=32
 N_LAYER=1
 HIDDEN_SIZE=256
-MAX_LEN=120
+MAX_LEN=150
 # train
 python cws/train.py \
     --input_file $INPUT_FILE \
@@ -34,7 +38,7 @@ python cws/train.py \
     --max_len $MAX_LEN \
     --language_model $LM \
     --gradient_clip_val 0.5 \
-    --bert_mode sum \
+    --bert_mode none \
     --gpus 1
 
 sleep 1

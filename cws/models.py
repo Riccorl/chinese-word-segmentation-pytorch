@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import transformers as tr
 from torch.utils.data import DataLoader
-
+import copy
 from dataset import Dataset
 
 
@@ -16,16 +16,17 @@ class ChineseSegmenter(pl.LightningModule):
         self.hparams = hparams
         self.save_hyperparameters(self.hparams)
 
-        self.criterion = nn.CrossEntropyLoss(ignore_index=0)
+        self.criterion = nn.CrossEntropyLoss()
         # model definition
-        self.lmodel = tr.BertModel.from_pretrained(
+        config = tr.AutoConfig.from_pretrained(
             self.hparams.language_model, output_hidden_states=True
         )
+        self.lmodel = tr.AutoModel.from_pretrained(
+            self.hparams.language_model, config=config
+        )
+        self.hparams.hidden_size = self.lmodel.config.hidden_size 
         if self.hparams.bert_mode == "concat":
-            self.lmodel.config.hidden_size *= 4
-        
-        self.dropout = nn.Dropout(0.2)
-        self.classifier = nn.Linear(self.lmodel.config.hidden_size, 5)
+            self.hparams.hidden_size *= 4
         # self.lstms = nn.LSTM(
         #     self.lmodel.config.hidden_size,
         #     self.hparams.hidden_size,
@@ -33,46 +34,37 @@ class ChineseSegmenter(pl.LightningModule):
         #     dropout=0.4 if self.hparams.num_layers > 1 else 0,
         #     bidirectional=True,
         # )
-        # self.dropouts = nn.Dropout(0.5)
-        # self.output = nn.Linear(self.hparams.hidden_size * 2, 5)
+        self.dropout = nn.Dropout(0.2)
+        self.classifier = nn.Linear(self.hparams.hidden_size, 5)
 
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(
             inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
         )
-        sequence_output = outputs[0]
-        sequence_output = self.dropout(sequence_output)
-        logits = self.classifier(sequence_output)
-        return logits
-
-    # def forward(self, inputs, *args, **kwargs):
-    #     x = self.lmodel(
-    #         inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
-    #     )
-    #     if self.hparams.bert_mode == "none":
-    #         x = x[0]
-    #     elif self.hparams.bert_mode == "concat":
-    #         x = x[2][-4:]
-    #         x = torch.cat(x, dim=-1)
-    #     elif self.hparams.bert_mode == "sum":
-    #         x = x[2][-4:]
-    #         x = torch.stack(x, dim=0).sum(dim=0)
-    #     else:
-    #         raise ValueError('Mode not supported, chose between "concat" and "sum"')
-    #     x, _ = self.lstms(x)
-    #     x = self.output(x)
-    #     return x
+        if self.hparams.bert_mode == "none":
+            outputs = outputs[0]
+        elif self.hparams.bert_mode == "concat":
+            outputs = outputs[2][-4:]
+            outputs = torch.cat(outputs, dim=-1)
+        elif self.hparams.bert_mode == "sum":
+            outputs = outputs[2][-4:]
+            outputs = torch.stack(outputs, dim=0).sum(dim=0)
+        # outputs, _ = self.lstms(outputs)
+        if self.training:
+            outputs = self.dropout(outputs)
+        outputs = self.classifier(outputs)
+        return outputs
 
     def training_step(self, batch, *args):
         x, y = batch
         y_hat = self.forward(x)
-        loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
+        loss = self._compute_active_loss(x, y, y_hat)
         return {"loss": loss}
 
     def validation_step(self, batch, *args):
         x, y = batch
         y_hat = self.forward(x)
-        loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
+        loss = self._compute_active_loss(x, y, y_hat)
         return {"val_loss": loss}
 
     def validation_end(self, outputs):
@@ -92,7 +84,7 @@ class ChineseSegmenter(pl.LightningModule):
         self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, patience=2, verbose=True
         )
@@ -114,6 +106,16 @@ class ChineseSegmenter(pl.LightningModule):
             "pin_memory": True,
             "collate_fn": Dataset.generate_batch,
         }
+
+    def _compute_active_loss(self, x, y, y_hat):
+        active_loss = x["attention_mask"].view(-1) == 1
+        active_logits = y_hat.view(-1, 5)
+        active_labels = torch.where(
+            active_loss,
+            y.view(-1),
+            torch.tensor(self.criterion.ignore_index).type_as(y),
+        )
+        return self.criterion(active_logits, active_labels)
 
     @staticmethod
     def _load_data(input_file: str, language_model: str, max_length: int):
