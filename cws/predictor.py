@@ -31,9 +31,9 @@ class Predictor:
 
     def prediction_generator(self, line: List[str]):
         line = [c for c in line]
-        prediction = self._get_predictions(line[: self.model_max_length - 10])
-        if len(line) > self.tokenizer.model_max_length - 10:
-            prediction_left = self._get_predictions(line[self.model_max_length - 10 :])
+        prediction = self._get_predictions(line[: self.model_max_length])
+        if len(line) > self.tokenizer.model_max_length:
+            prediction_left = self._get_predictions(line[self.model_max_length :])
             prediction = np.concatenate([prediction, prediction_left])
         bies_pred = [self.bies_dict[p + 1] for p in prediction]
         words_pred = [

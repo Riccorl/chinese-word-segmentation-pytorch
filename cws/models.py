@@ -71,8 +71,6 @@ class ChineseSegmenter(pl.LightningModule):
         self.data = self._load_data(
             self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
         )
-
-    def setup(self, stage: str):
         self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
@@ -128,7 +126,9 @@ class ChineseSegmenter(pl.LightningModule):
         parser.add_argument(
             "--batch_size", help="size of the batch", type=int, default=32
         )
-        parser.add_argument("--lr", help="starting learning rate", type=float)
+        parser.add_argument(
+            "--lr", help="starting learning rate", type=float, default=0.001
+        )
         parser.add_argument(
             "--mode",
             help="bert output mode",
@@ -139,5 +139,8 @@ class ChineseSegmenter(pl.LightningModule):
             "--language_model",
             help="language model to use",
             default="bert-base-chinese",
+        )
+        parser.add_argument(
+            "--model_path", help="where to save model checkpoints", default="./models",
         )
         return parser
