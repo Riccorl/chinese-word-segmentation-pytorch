@@ -18,7 +18,7 @@ class Predictor:
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             self.model.hparams.language_model, tokenize_chinese_chars=True
         )
-        self.model_max_length = self.tokenizer.model_max_length
+        self.model_max_length = 500
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.model.to(self.device)
 
@@ -32,7 +32,7 @@ class Predictor:
     def prediction_generator(self, line: List[str]):
         line = [c for c in line]
         prediction = self._get_predictions(line[: self.model_max_length])
-        if len(line) > self.tokenizer.model_max_length:
+        if len(line) > self.model_max_length:
             prediction_left = self._get_predictions(line[self.model_max_length :])
             prediction = np.concatenate([prediction, prediction_left])
         bies_pred = [self.bies_dict[p + 1] for p in prediction]

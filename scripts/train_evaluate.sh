@@ -19,10 +19,10 @@ GOLD_FILE="$BASE_PATH/gold/$1_test_gold.utf8"
 DICT_FILE="$BASE_PATH/gold/$1_training_words.utf8"
 PREDICT_FILE="predictions/$1_pred.utf8"
 LM=$2
-EPOCHS=1
+EPOCHS=30
 BATCH_SIZE=32
 N_LAYER=1
-HIDDEN_SIZE=128
+HIDDEN_SIZE=256
 MAX_LEN=120
 # train
 python cws/train.py \
@@ -34,10 +34,18 @@ python cws/train.py \
     --max_len $MAX_LEN \
     --language_model $LM \
     --gradient_clip_val 0.5 \
-    --gpus 1 \
+    --bert_mode sum \
+    --gpus 1
 
-BEST_MODEL_PATH=`cat predictions/best_model_path.txt`
+sleep 1
+BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)
+echo $BEST_MODEL_PATH
 # predict
 python cws/predictor.py $TEST_FILE $PREDICT_FILE $BEST_MODEL_PATH
 # evaluate
-scripts/score $DICT_FILE $GOLD_FILE $PREDICT_FILE
+if [ "$(wc -l <$PREDICT_FILE)" -eq "$(wc -l <$GOLD_FILE)" ]; then
+    echo 'Same number of lines, ok'
+    scripts/score $DICT_FILE $GOLD_FILE $PREDICT_FILE
+else
+    echo 'Number of lines mismatch!'
+fi

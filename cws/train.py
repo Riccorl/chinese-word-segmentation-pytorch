@@ -23,7 +23,7 @@ def main():
     model_path = os.path.join(
         hparams.model_path,
         hparams.language_model.split("/")[-1],
-        "model_{epoch:02d}_{val_loss:.2f}",
+        "model_{epoch:02d}_{val_loss:.4f}",
     )
     print("Save checkponts in:", model_path)
     checkpoint_callback = ModelCheckpoint(

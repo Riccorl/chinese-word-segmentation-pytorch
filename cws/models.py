@@ -21,37 +21,55 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.BertModel.from_pretrained(
             self.hparams.language_model, output_hidden_states=True
         )
-        self.lstms = nn.LSTM(
-            self.lmodel.config.hidden_size * 4,
-            self.hparams.hidden_size,
-            num_layers=self.hparams.num_layers,
-            dropout=0.4,
-            bidirectional=True,
-        )
-        self.dropouts = nn.Dropout(0.5)
-        self.output = nn.Linear(self.hparams.hidden_size * 2, 5)
+        if self.hparams.bert_mode == "concat":
+            self.lmodel.config.hidden_size *= 4
+        
+        self.dropout = nn.Dropout(0.2)
+        self.classifier = nn.Linear(self.lmodel.config.hidden_size, 5)
+        # self.lstms = nn.LSTM(
+        #     self.lmodel.config.hidden_size,
+        #     self.hparams.hidden_size,
+        #     num_layers=self.hparams.num_layers,
+        #     dropout=0.4 if self.hparams.num_layers > 1 else 0,
+        #     bidirectional=True,
+        # )
+        # self.dropouts = nn.Dropout(0.5)
+        # self.output = nn.Linear(self.hparams.hidden_size * 2, 5)
 
-    def forward(self, inputs, **kwargs):
-        x = self.lmodel(
+    def forward(self, inputs, *args, **kwargs):
+        outputs = self.lmodel(
             inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
-        )[2][-4:]
-        if self.hparams.mode == "concat":
-            x = torch.cat(x, dim=-1)
-        elif self.hparams.mode == "sum":
-            x = torch.stack(x, dim=0).sum(dim=0)
-        else:
-            raise ValueError('Mode not supported, chose between "concat" and "sum"')
-        x, _ = self.lstms(x)
-        x = self.output(x)
-        return x
+        )
+        sequence_output = outputs[0]
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+        return logits
 
-    def training_step(self, batch, batch_nb):
+    # def forward(self, inputs, *args, **kwargs):
+    #     x = self.lmodel(
+    #         inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
+    #     )
+    #     if self.hparams.bert_mode == "none":
+    #         x = x[0]
+    #     elif self.hparams.bert_mode == "concat":
+    #         x = x[2][-4:]
+    #         x = torch.cat(x, dim=-1)
+    #     elif self.hparams.bert_mode == "sum":
+    #         x = x[2][-4:]
+    #         x = torch.stack(x, dim=0).sum(dim=0)
+    #     else:
+    #         raise ValueError('Mode not supported, chose between "concat" and "sum"')
+    #     x, _ = self.lstms(x)
+    #     x = self.output(x)
+    #     return x
+
+    def training_step(self, batch, *args):
         x, y = batch
         y_hat = self.forward(x)
         loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
         return {"loss": loss}
 
-    def validation_step(self, batch, batch_nb):
+    def validation_step(self, batch, *args):
         x, y = batch
         y_hat = self.forward(x)
         loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
@@ -76,7 +94,7 @@ class ChineseSegmenter(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, patience=3, verbose=True
+            optimizer, patience=2, verbose=True
         )
         return [optimizer], [scheduler]
 
@@ -92,7 +110,8 @@ class ChineseSegmenter(pl.LightningModule):
         return {
             "batch_size": self.hparams.batch_size,
             "shuffle": train,
-            "num_workers": 6,
+            "num_workers": 8,
+            "pin_memory": True,
             "collate_fn": Dataset.generate_batch,
         }
 
@@ -130,10 +149,10 @@ class ChineseSegmenter(pl.LightningModule):
             "--lr", help="starting learning rate", type=float, default=0.001
         )
         parser.add_argument(
-            "--mode",
+            "--bert_mode",
             help="bert output mode",
-            default="concat",
-            choices=["concat", "sum"],
+            default="none",
+            choices=["none", "concat", "sum"],
         )
         parser.add_argument(
             "--language_model",
