@@ -9,6 +9,7 @@ predictions
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,pycharm+all
 
 ### VisualStudioCode ###
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
