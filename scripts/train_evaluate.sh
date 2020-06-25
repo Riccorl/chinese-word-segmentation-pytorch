@@ -22,6 +22,7 @@ TEST_FILE="$BASE_PATH/testing/$1_test.utf8"
 GOLD_FILE="$BASE_PATH/gold/$1_test_gold.utf8"
 DICT_FILE="$BASE_PATH/gold/$1_training_words.utf8"
 PREDICT_FILE="predictions/$1_pred.utf8"
+EMB="resources/bigram_unigram300.bin"
 LM=$2
 if [ -z "$2" ]; then
     # default value, not used if not present.
@@ -29,7 +30,7 @@ if [ -z "$2" ]; then
     LM="bert-base-chinese"
 fi
 EPOCHS=30
-BATCH_SIZE=64
+BATCH_SIZE=32
 N_LAYER=2
 HIDDEN_SIZE=256
 MAX_LEN=120
@@ -41,17 +42,20 @@ python cws/train.py \
     --hidden_size $HIDDEN_SIZE \
     --num_layer $N_LAYER \
     --max_len $MAX_LEN \
-    --bert_mode none \
-    --embeddings_file "resources/bigram_unigram300.bin" \
+    --bert_mode concat \
     --gpus 1 \
-    --run 4 \
+    --run 5 \
     --language_model $LM \
-    --lr 0.0002 \
-    # --gradient_clip_val 1 \
+    --gradient_clip_val 0.5 \
+    --dataset $1 \
+    --freeze \
+    --lr 0.04
+    #--lr 0.0002 \
+    #--embeddings_file $EMB \
 
 sleep 1
 BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)
-echo $BEST_MODEL_PATH
+echo "Best model path: $BEST_MODEL_PATH"
 # predict
 python cws/predictor.py $TEST_FILE $PREDICT_FILE $BEST_MODEL_PATH
 # evaluate

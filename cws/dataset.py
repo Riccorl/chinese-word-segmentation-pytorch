@@ -39,10 +39,11 @@ class Dataset(torch.utils.data.Dataset):
         filename, _, ext = self.file_path.rpartition(".")
         features_file = filename + "_nospace." + ext
         labels_file = filename + "_bies." + ext
-        print("Features file:", features_file)
-        print("Labels file:", labels_file)
         features = self.read_dataset(features_file)
         labels = self.read_dataset(labels_file)
+        avg_len = sum(len(s) for s in features) // len(features)
+        print("Dataset average length:", avg_len)
+        self.max_length = avg_len
         return features, labels
 
     @staticmethod

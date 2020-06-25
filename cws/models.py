@@ -27,11 +27,21 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.AutoModel.from_pretrained(
             self.hparams.language_model, config=config
         )
-        self.hparams.hidden_size = self.lmodel.config.hidden_size
+        #print(self.lmodel.trainable)
+        self.hparams.lstm_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
-            self.hparams.hidden_size *= 4
-        self.dropout = nn.Dropout(0.4)
-        self.classifier = nn.Linear(self.hparams.hidden_size, 5)
+            self.hparams.lstm_size *= 4
+        
+        self.lstms = nn.LSTM(
+            self.hparams.lstm_size,
+            self.hparams.hidden_size,
+            num_layers=self.hparams.num_layers,
+            dropout=0.6 if self.hparams.num_layers > 1 else 0,
+            bidirectional=True,
+        )
+
+        self.dropout = nn.Dropout(0.6)
+        self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(
@@ -45,7 +55,7 @@ class ChineseSegmenter(pl.LightningModule):
         elif self.hparams.bert_mode == "sum":
             outputs = outputs[2][-4:]
             outputs = torch.stack(outputs, dim=0).sum(dim=0)
-        # outputs, _ = self.lstms(outputs)
+        outputs, _ = self.lstms(outputs)
         if self.training:
             outputs = self.dropout(outputs)
         outputs = self.classifier(outputs)
@@ -80,9 +90,10 @@ class ChineseSegmenter(pl.LightningModule):
         self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
-        optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, patience=2, verbose=True
+        # optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
+        optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=1# , patience=2, verbose=True
         )
         return [optimizer], [scheduler]
 
@@ -174,15 +185,17 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
             self.hparams.embeddings_file, binary=True
         )
         weights = torch.FloatTensor(self.word_vectors.vectors)
-        self.embeddings = nn.Embedding.from_pretrained(weights, padding_idx=0)
+        self.embeddings = nn.Embedding.from_pretrained(
+            weights, padding_idx=0, freeze=False
+        )
         self.lstms = nn.LSTM(
             self.word_vectors.vector_size * 2,
             self.hparams.hidden_size,
             num_layers=self.hparams.num_layers,
-            dropout=0.4 if self.hparams.num_layers > 1 else 0,
+            dropout=0.5 if self.hparams.num_layers > 1 else 0,
             bidirectional=True,
         )
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.4)
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
     def forward(self, inputs, *args, **kwargs):
@@ -233,4 +246,7 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--embeddings_file", help="The path of the embeddings file")
+        parser.add_argument(
+            "--freeze", help="unfreeze embeddings ", action="store_true"
+        )
         return parser

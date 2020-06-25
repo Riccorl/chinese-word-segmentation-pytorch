@@ -71,8 +71,7 @@ class PredictorLSTM(Predictor):
         line = "".join(line)
         example = DatasetLSTM._process_text(line, self.model_max_length, pad=False)
         example = [DatasetLSTM._encode_sequence(e, self.vocab) for e in example]
-        example = [torch.tensor(e).unsqueeze(0) for e in example]
-        example = [e.to(self.device) for e in example]
+        example = [torch.tensor(e, device=self.device).unsqueeze(0) for e in example]
         prediction = self.model(example, training=False)[0]
         prediction = self.softmax_fn(prediction).cpu().data.numpy()
         prediction = prediction[:, 1:].argmax(axis=-1)
