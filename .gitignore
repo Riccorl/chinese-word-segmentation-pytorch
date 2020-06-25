@@ -4,6 +4,7 @@ data
 models
 logs
 predictions
+resources
 
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,pycharm+all
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,pycharm+all

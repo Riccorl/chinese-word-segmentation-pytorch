@@ -1,13 +1,16 @@
+import copy
 from argparse import ArgumentParser
+from functools import partial
 
+import gensim
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import transformers as tr
 from torch.utils.data import DataLoader
-import copy
-from dataset import Dataset
+
+from dataset import DatasetLM, DatasetLSTM
 
 
 class ChineseSegmenter(pl.LightningModule):
@@ -24,17 +27,10 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.AutoModel.from_pretrained(
             self.hparams.language_model, config=config
         )
-        self.hparams.hidden_size = self.lmodel.config.hidden_size 
+        self.hparams.hidden_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
             self.hparams.hidden_size *= 4
-        # self.lstms = nn.LSTM(
-        #     self.lmodel.config.hidden_size,
-        #     self.hparams.hidden_size,
-        #     num_layers=self.hparams.num_layers,
-        #     dropout=0.4 if self.hparams.num_layers > 1 else 0,
-        #     bidirectional=True,
-        # )
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.4)
         self.classifier = nn.Linear(self.hparams.hidden_size, 5)
 
     def forward(self, inputs, *args, **kwargs):
@@ -104,7 +100,7 @@ class ChineseSegmenter(pl.LightningModule):
             "shuffle": train,
             "num_workers": 8,
             "pin_memory": True,
-            "collate_fn": Dataset.generate_batch,
+            "collate_fn": DatasetLM.generate_batch,
         }
 
     def _compute_active_loss(self, x, y, y_hat):
@@ -119,7 +115,9 @@ class ChineseSegmenter(pl.LightningModule):
 
     @staticmethod
     def _load_data(input_file: str, language_model: str, max_length: int):
-        return Dataset(input_file, language_model=language_model, max_length=max_length)
+        return DatasetLM(
+            input_file, language_model=language_model, max_length=max_length
+        )
 
     @staticmethod
     def _split_data(data):
@@ -147,9 +145,7 @@ class ChineseSegmenter(pl.LightningModule):
         parser.add_argument(
             "--batch_size", help="size of the batch", type=int, default=32
         )
-        parser.add_argument(
-            "--lr", help="starting learning rate", type=float, default=0.001
-        )
+        parser.add_argument("--lr", help="starting learning rate", type=float)
         parser.add_argument(
             "--bert_mode",
             help="bert output mode",
@@ -164,4 +160,77 @@ class ChineseSegmenter(pl.LightningModule):
         parser.add_argument(
             "--model_path", help="where to save model checkpoints", default="./models",
         )
+        return parser
+
+
+class ChineseSegmenterLSTM(ChineseSegmenter):
+    def __init__(self, hparams, *args, **kwargs):
+        super(ChineseSegmenter, self).__init__()
+        self.hparams = hparams
+        self.save_hyperparameters(self.hparams)
+        self.criterion = nn.CrossEntropyLoss(ignore_index=0)
+        # model definition
+        self.word_vectors = gensim.models.KeyedVectors.load_word2vec_format(
+            self.hparams.embeddings_file, binary=True
+        )
+        weights = torch.FloatTensor(self.word_vectors.vectors)
+        self.embeddings = nn.Embedding.from_pretrained(weights, padding_idx=0)
+        self.lstms = nn.LSTM(
+            self.word_vectors.vector_size * 2,
+            self.hparams.hidden_size,
+            num_layers=self.hparams.num_layers,
+            dropout=0.4 if self.hparams.num_layers > 1 else 0,
+            bidirectional=True,
+        )
+        self.dropout = nn.Dropout(0.2)
+        self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
+
+    def forward(self, inputs, *args, **kwargs):
+        unigrams, bigrams = inputs
+        outputs_unigrams = self.embeddings(unigrams)
+        outputs_bigrams = self.embeddings(bigrams)
+        outputs = torch.cat([outputs_unigrams, outputs_bigrams], dim=-1)
+        outputs, _ = self.lstms(outputs)
+        if self.training:
+            outputs = self.dropout(outputs)
+        outputs = self.classifier(outputs)
+        return outputs
+
+    def training_step(self, batch, *args):
+        x, y = batch
+        y_hat = self.forward(x)
+        loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
+        return {"loss": loss}
+
+    def validation_step(self, batch, *args):
+        x, y = batch
+        y_hat = self.forward(x)
+        loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
+        return {"val_loss": loss}
+
+    def prepare_data(self):
+        self.data = self._load_data(
+            self.hparams.input_file, self.word_vectors, self.hparams.max_len
+        )
+        self.train_set, self.val_set = self._split_data(self.data)
+
+    def _get_loader_params(self, train=True):
+        return {
+            "batch_size": self.hparams.batch_size,
+            "shuffle": train,
+            "num_workers": 8,
+            "pin_memory": True,
+            "collate_fn": partial(DatasetLSTM.generate_batch, vocab=self.data.vocab),
+        }
+
+    @staticmethod
+    def _load_data(
+        input_file: str, word_vectors: gensim.models.word2vec.Word2Vec, max_length: int
+    ):
+        return DatasetLSTM(input_file, word_vectors=word_vectors, max_length=max_length)
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument("--embeddings_file", help="The path of the embeddings file")
         return parser
