@@ -27,11 +27,11 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.AutoModel.from_pretrained(
             self.hparams.language_model, config=config
         )
-        #print(self.lmodel.trainable)
+        # print(self.lmodel.trainable)
         self.hparams.lstm_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
             self.hparams.lstm_size *= 4
-        
+
         self.lstms = nn.LSTM(
             self.hparams.lstm_size,
             self.hparams.hidden_size,
@@ -87,15 +87,18 @@ class ChineseSegmenter(pl.LightningModule):
         self.data = self._load_data(
             self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
         )
+        self.lmodel.resize_token_embeddings(len(self.data.tokenizer))
         self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
         # optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
-        optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=1# , patience=2, verbose=True
+        optimizer = optim.SGD(
+            self.parameters(), lr=self.hparams.lr, momentum=0.95, weight_decay=0.01
         )
-        return [optimizer], [scheduler]
+        # scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        #     optimizer, T_0=1  # , patience=2, verbose=True
+        # )
+        return [optimizer]  # , [scheduler]
 
     def train_dataloader(self):
         params = self._get_loader_params()

@@ -70,6 +70,7 @@ class DatasetLM(Dataset):
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             language_model, tokenize_chinese_chars=True
         )
+        self.tokenizer.add_tokens("<ENG>")
         self.max_length = max_length
         self.features, self.labels = self.process_data()
 
@@ -170,7 +171,7 @@ class DatasetLSTM(DatasetLM):
         :param word2vec: trained Gensim Word2Vec model
         :return: a dictionary from token to int
         """
-        vocab = {"<PAD>": 0, "<UNK>": 1}
+        vocab = {"<PAD>": 0, "<UNK>": 1, "<ENG>": 2}
         for index, word in enumerate(word_vectors.wv.index2word):
             vocab[word] = index + 2
         return vocab

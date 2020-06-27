@@ -70,7 +70,7 @@ def remove_space(input_file: Sequence[str], output_file: str):
                 "<ENG>" if not is_cjk(w[0]) and w not in puncts else w
                 for w in splitted_sentence
             ]
-            splitted_sentence = "".join(splitted_sentence)
+            splitted_sentence = " ".join(splitted_sentence)
             out_file.write(splitted_sentence + "\n")
 
 
