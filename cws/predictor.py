@@ -1,13 +1,15 @@
+import re
 from argparse import ArgumentParser
 from typing import List
 
 import numpy as np
-import torch
 import transformers as tr
 from tqdm import tqdm
-import re
+
+import torch
 from dataset import Dataset, DatasetLM, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
+from utils import is_cjk
 
 
 class Predictor:
@@ -17,6 +19,7 @@ class Predictor:
         self.model_max_length = 500
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.chinese_regex = r"[\u4e00-\ufaff]|[0-9]+|[.,!?;]+|[a-zA-Z]+\'*[a-z]*"
+        self.puncts = set(string.punctuation)
 
     def predict(self, input_path: str, output_path: str):
         test_file = Dataset.read_dataset(input_path)
@@ -27,6 +30,7 @@ class Predictor:
 
     def prediction_generator(self, line: List[str]):
         line = [c for c in re.findall(chinese_regex, line, re.UNICODE)]
+        line = ["<ENG>" if not is_cjk(w[0]) and w not in puncts else w for w in line]
         prediction = self._get_predictions(line[: self.model_max_length])
         if len(line) > self.model_max_length:
             prediction_left = self._get_predictions(line[self.model_max_length :])
