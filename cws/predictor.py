@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import transformers as tr
 from tqdm import tqdm
-
+import re
 from dataset import Dataset, DatasetLM, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
 
@@ -16,6 +16,7 @@ class Predictor:
         self.softmax_fn = torch.nn.Softmax(dim=-1)
         self.model_max_length = 500
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.chinese_regex = r"[\u4e00-\ufaff]|[0-9]+|[.,!?;]+|[a-zA-Z]+\'*[a-z]*"
 
     def predict(self, input_path: str, output_path: str):
         test_file = Dataset.read_dataset(input_path)
@@ -25,7 +26,7 @@ class Predictor:
                 out_file.write("".join(words_pred).strip() + "\n")
 
     def prediction_generator(self, line: List[str]):
-        line = [c for c in line]
+        line = [c for c in re.findall(chinese_regex, line, re.UNICODE)]
         prediction = self._get_predictions(line[: self.model_max_length])
         if len(line) > self.model_max_length:
             prediction_left = self._get_predictions(line[self.model_max_length :])
@@ -44,6 +45,8 @@ class PredictorLM(Predictor):
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             self.model.hparams.language_model, tokenize_chinese_chars=True
         )
+        self.tokenizer.add_tokens("<ENG>")
+        # self.lmodel.resize_token_embeddings(len(self.data.tokenizer))
         self.model = self.model.to(self.device)
 
     def _get_predictions(self, line):
@@ -68,7 +71,7 @@ class PredictorLSTM(Predictor):
         self.model = self.model.to(self.device)
 
     def _get_predictions(self, line):
-        line = "".join(line)
+        line = " ".join(line)
         example = DatasetLSTM._process_text(line, self.model_max_length, pad=False)
         example = [DatasetLSTM._encode_sequence(e, self.vocab) for e in example]
         example = [torch.tensor(e, device=self.device).unsqueeze(0) for e in example]
