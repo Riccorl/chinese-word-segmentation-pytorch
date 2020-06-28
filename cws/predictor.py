@@ -1,12 +1,14 @@
+import abc
 import re
+import string
 from argparse import ArgumentParser
 from typing import List
 
 import numpy as np
+import torch
 import transformers as tr
 from tqdm import tqdm
 
-import torch
 from dataset import Dataset, DatasetLM, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
 from utils import is_cjk
@@ -28,12 +30,18 @@ class Predictor:
                 words_pred = self.prediction_generator(line)
                 out_file.write("".join(words_pred).strip() + "\n")
 
+    @abc.abstractmethod
+    def _get_predictions(self, line) -> np.array:
+        pass
+
     def prediction_generator(self, line: List[str]):
-        line = [c for c in re.findall(chinese_regex, line, re.UNICODE)]
-        line = ["<ENG>" if not is_cjk(w[0]) and w not in puncts else w for w in line]
-        prediction = self._get_predictions(line[: self.model_max_length])
-        if len(line) > self.model_max_length:
-            prediction_left = self._get_predictions(line[self.model_max_length :])
+        line = [c for c in re.findall(self.chinese_regex, line, re.UNICODE)]
+        line_ = [
+            "<ENG>" if not is_cjk(w[0]) and w not in self.puncts else w for w in line
+        ]
+        prediction = self._get_predictions(line_[: self.model_max_length])
+        if len(line_) > self.model_max_length:
+            prediction_left = self._get_predictions(line_[self.model_max_length :])
             prediction = np.concatenate([prediction, prediction_left])
         bies_pred = [self.bies_dict[p + 1] for p in prediction]
         words_pred = [

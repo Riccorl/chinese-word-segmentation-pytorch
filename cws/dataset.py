@@ -4,6 +4,7 @@ from typing import Dict, List, Sequence, Tuple
 import gensim
 import torch
 import transformers as tr
+import abc
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -27,8 +28,11 @@ class Dataset(torch.utils.data.Dataset):
         :return: list of features and labels
         """
         features, labels = self.load_files()
-        x = [self._process_text(f, self.max_length) for f in features]
+        x = [self._process_text(f, self.max_length, False) for f in features]
         y = [self._convert_labels(f, self.max_length) for f in labels]
+        print(len(x[0][0]))
+        print(len(x[0][1]))
+        print(len(y[0]))
         return x, y
 
     def load_files(self) -> Tuple[List[str], List[str]]:
@@ -41,7 +45,7 @@ class Dataset(torch.utils.data.Dataset):
         labels_file = filename + "_bies." + ext
         features = self.read_dataset(features_file)
         labels = self.read_dataset(labels_file)
-        avg_len = sum(len(s) for s in features) // len(features)
+        avg_len = sum(len(s.split()) for s in features) // len(features)
         print("Dataset average length:", avg_len)
         self.max_length = avg_len
         return features, labels
@@ -139,8 +143,8 @@ class DatasetLSTM(DatasetLM):
         :param text: text to preprocess
         :return: a tuple containg the data for the model
         """
-        input_unigrams = [c for c in text]
-        text_bigrams = DatasetLSTM.compute_bigrams(text)
+        input_unigrams = [c for c in text.split()]
+        text_bigrams = DatasetLSTM.compute_bigrams(text.split())
         input_bigrams = [c for c in text_bigrams]
         # cut to max len
         input_unigrams = input_unigrams[:max_length]
@@ -159,14 +163,12 @@ class DatasetLSTM(DatasetLM):
         :return: the same line with numerical labels
         """
         converted_line = [self.bies_dict[c] for c in bies_line[:max_length]]
-        if len(converted_line) < max_length:
-            converted_line += [0] * (max_length - len(converted_line))
+        # if len(converted_line) < max_length:
+        #     converted_line += [0] * (max_length - len(converted_line))
         return converted_line
 
     @staticmethod
-    def vocab_from_w2v(
-        word_vectors: gensim.models.word2vec.Word2Vec
-    ) -> Dict[str, int]:
+    def vocab_from_w2v(word_vectors: gensim.models.word2vec.Word2Vec) -> Dict[str, int]:
         """
         :param word2vec: trained Gensim Word2Vec model
         :return: a dictionary from token to int
