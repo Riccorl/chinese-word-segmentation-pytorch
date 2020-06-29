@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         :return: list of features and labels
         """
         features, labels = self.load_files()
-        x = [self._process_text(f, self.max_length, False) for f in features]
+        x = [self._process_text(f, self.max_length) for f in features]
         y = [self._convert_labels(l, self.max_length) for l in labels]
         return x, y
 
@@ -160,8 +160,8 @@ class DatasetLSTM(DatasetLM):
         :return: the same line with numerical labels
         """
         converted_line = [self.bies_dict[c] for c in bies_line[:max_length]]
-        # if len(converted_line) < max_length:
-        #     converted_line += [0] * (max_length - len(converted_line))
+        if len(converted_line) < max_length:
+            converted_line += [0] * (max_length - len(converted_line))
         return converted_line
 
     @staticmethod
