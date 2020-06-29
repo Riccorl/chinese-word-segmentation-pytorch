@@ -2,7 +2,7 @@ from itertools import chain, tee
 from typing import Dict, List, Sequence, Tuple
 
 import gensim
-#import torch
+import torch
 import transformers as tr
 import abc
 
