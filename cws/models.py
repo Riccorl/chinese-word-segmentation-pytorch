@@ -3,13 +3,14 @@ from argparse import ArgumentParser
 from functools import partial
 
 import gensim
+import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import transformers as tr
 from torch.utils.data import DataLoader
 
+import transformers as tr
 from dataset import DatasetLM, DatasetLSTM
 
 
@@ -187,10 +188,10 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         self.word_vectors = gensim.models.KeyedVectors.load_word2vec_format(
             self.hparams.embeddings_file, binary=True
         )
-        weights = torch.FloatTensor(self.word_vectors.vectors)
-        self.embeddings = nn.Embedding.from_pretrained(
-            weights, padding_idx=0, freeze=False
+        self.embeddings = self._get_embeddings_layer(
+            self.word_vectors.vectors, self.hparams.freeze
         )
+
         self.lstms = nn.LSTM(
             self.word_vectors.vector_size * 2,
             self.hparams.hidden_size,
@@ -238,6 +239,20 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
             "pin_memory": True,
             "collate_fn": partial(DatasetLSTM.generate_batch, vocab=self.data.vocab),
         }
+
+    @staticmethod
+    def _get_embeddings_layer(weights, freeze: bool):
+        # zero vector for pad, 1 in position 1
+        pad = np.zeros([1, weights.shape[1]])
+        pad[1] = 1
+        # mean vector for unknowns
+        unk = np.mean(weights, axis=0, keepdims=True)
+        # zero vector for <ENG>, 1 in position 42
+        eng = np.zeros([1, weights.shape[1]])
+        eng[42] = 1
+        weights = np.concatenate((pad, unk, eng, weights))
+        weights = torch.FloatTensor(weights)
+        return nn.Embedding.from_pretrained(weights, padding_idx=0, freeze=freeze)
 
     @staticmethod
     def _load_data(
