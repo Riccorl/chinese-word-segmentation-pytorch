@@ -6,9 +6,10 @@ from typing import List
 
 import numpy as np
 import torch
-import transformers as tr
 from tqdm import tqdm
 
+import transformers as tr
+import zhon.hanzi
 from dataset import Dataset, DatasetLM, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
 from utils import is_cjk
@@ -20,7 +21,9 @@ class Predictor:
         self.softmax_fn = torch.nn.Softmax(dim=-1)
         self.model_max_length = 500
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.chinese_regex = r"[\u4e00-\ufaff]|[0-9]+|[.,!?;]+|[a-zA-Z]+\'*[a-z]*"
+        self.chinese_regex = r"[\u4e00-\u9fff]|[0-9]+|[.,!?;]+|[{}]+|[a-zA-Z]+\'*[a-z]*".format(
+            zhon.hanzi.punctuation
+        )
         self.puncts = set(string.punctuation)
 
     def predict(self, input_path: str, output_path: str):

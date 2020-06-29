@@ -2,7 +2,7 @@ from itertools import chain, tee
 from typing import Dict, List, Sequence, Tuple
 
 import gensim
-import torch
+#import torch
 import transformers as tr
 import abc
 
@@ -29,10 +29,7 @@ class Dataset(torch.utils.data.Dataset):
         """
         features, labels = self.load_files()
         x = [self._process_text(f, self.max_length, False) for f in features]
-        y = [self._convert_labels(f, self.max_length) for f in labels]
-        print(len(x[0][0]))
-        print(len(x[0][1]))
-        print(len(y[0]))
+        y = [self._convert_labels(l, self.max_length) for l in labels]
         return x, y
 
     def load_files(self) -> Tuple[List[str], List[str]]:

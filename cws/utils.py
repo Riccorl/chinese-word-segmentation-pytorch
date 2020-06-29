@@ -4,8 +4,12 @@ import unicodedata
 from typing import List, Sequence
 
 import gensim
+import zhon.hanzi
 
-chinese_regex = r"[\u4e00-\ufaff]|[0-9]+|[.,!?;]+|[a-zA-Z]+\'*[a-z]*"
+
+chinese_regex = r"[\u4e00-\u9fff]|[0-9]+|[.,!?;]+|[{}]+|[a-zA-Z]+\'*[a-z]*".format(
+    zhon.hanzi.punctuation
+)
 puncts = set(string.punctuation)
 
 
@@ -47,10 +51,10 @@ def _bies_word(word: str) -> str:
     :param word: word to convert in BIES tagging
     :return: BIES tagging converted word
     """
+    word = re.findall(chinese_regex, word, re.UNICODE)
     # if it's a char-word, tag it with S
     if len(word) == 1:
         return "S"
-    word = re.findall(chinese_regex, word, re.UNICODE)
     # else, B -> first char, I -> mid chars, E -> last char
     return "B" + "".join("I" for _ in word[1:-1]) + "E"
 
