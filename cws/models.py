@@ -244,12 +244,12 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     def _get_embeddings_layer(weights, freeze: bool):
         # zero vector for pad, 1 in position 1
         pad = np.zeros([1, weights.shape[1]])
-        pad[1] = 1
+        pad[0][1] = 1
         # mean vector for unknowns
         unk = np.mean(weights, axis=0, keepdims=True)
         # zero vector for <ENG>, 1 in position 42
         eng = np.zeros([1, weights.shape[1]])
-        eng[42] = 1
+        eng[0][42] = 1
         weights = np.concatenate((pad, unk, eng, weights))
         weights = torch.FloatTensor(weights)
         return nn.Embedding.from_pretrained(weights, padding_idx=0, freeze=freeze)

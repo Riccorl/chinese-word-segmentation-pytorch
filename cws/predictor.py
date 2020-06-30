@@ -21,10 +21,14 @@ class Predictor:
         self.softmax_fn = torch.nn.Softmax(dim=-1)
         self.model_max_length = 500
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.chinese_regex = r"[\u4e00-\u9fff]|[0-9]+|[.,!?;]+|[{}]+|[a-zA-Z]+\'*[a-z]*".format(
-            zhon.hanzi.punctuation
+        self.chinese_regex = r"[{}{}{}\u2500-\u257f]|[0-9]+|[{}●○△▲×]+|[{}∶]+|[a-zA-Z]+\'*[a-z]*".format(
+            zhon.hanzi.characters,
+            zhon.hanzi.radicals,
+            zhon.hanzi.cjk_ideographs,
+            zhon.hanzi.punctuation,
+            string.punctuation,
         )
-        self.puncts = set(string.punctuation)
+        self.puncts = set(string.punctuation) | set("●○△▲×∶”")
 
     def predict(self, input_path: str, output_path: str):
         test_file = Dataset.read_dataset(input_path)

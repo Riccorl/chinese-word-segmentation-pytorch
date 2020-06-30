@@ -7,10 +7,14 @@ import gensim
 import zhon.hanzi
 
 
-chinese_regex = r"[\u4e00-\u9fff]|[0-9]+|[.,!?;]+|[{}]+|[a-zA-Z]+\'*[a-z]*".format(
-    zhon.hanzi.punctuation
+CHINESE_REGEX = r"[{}{}{}\u2500-\u257f]|[0-9]+|[{}●○△▲×]+|[{}∶]+|[a-zA-Z]+\'*[a-z]*".format(
+    zhon.hanzi.characters,
+    zhon.hanzi.radicals,
+    zhon.hanzi.cjk_ideographs,
+    zhon.hanzi.punctuation,
+    string.punctuation,
 )
-puncts = set(string.punctuation)
+PUNCTS = set(string.punctuation) | set("●○△▲×∶”")
 
 
 def preprocess_file(filename: str, output_no_space: str, output_bies: str):
@@ -51,7 +55,7 @@ def _bies_word(word: str) -> str:
     :param word: word to convert in BIES tagging
     :return: BIES tagging converted word
     """
-    word = re.findall(chinese_regex, word, re.UNICODE)
+    word = re.findall(CHINESE_REGEX, word, re.UNICODE)
     # if it's a char-word, tag it with S
     if len(word) == 1:
         return "S"
@@ -69,9 +73,9 @@ def remove_space(input_file: Sequence[str], output_file: str):
     out_ctx = open(output_file, mode="w", encoding="utf-8")
     with out_ctx as out_file:
         for line in input_file:
-            splitted_sentence = re.findall(chinese_regex, line, re.UNICODE)
+            splitted_sentence = re.findall(CHINESE_REGEX, line, re.UNICODE)
             splitted_sentence = [
-                "<ENG>" if not is_cjk(w[0]) and w not in puncts else w
+                "<ENG>" if not is_cjk(w[0]) and w not in PUNCTS else w
                 for w in splitted_sentence
             ]
             splitted_sentence = " ".join(splitted_sentence)

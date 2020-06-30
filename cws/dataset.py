@@ -1,10 +1,10 @@
+import abc
 from itertools import chain, tee
 from typing import Dict, List, Sequence, Tuple
 
 import gensim
 import torch
 import transformers as tr
-import abc
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -30,6 +30,20 @@ class Dataset(torch.utils.data.Dataset):
         features, labels = self.load_files()
         x = [self._process_text(f, self.max_length) for f in features]
         y = [self._convert_labels(l, self.max_length) for l in labels]
+        # for i,(f,l) in enumerate(zip(x, y)):
+        #     if len(f[0]) != len(f[1]):
+        #         print("Index", i)
+        #         print("Different uni-bi")
+        #         print(f)
+        #         break
+        #     if len(f[0]) != len(l):
+        #         print("Index", i)
+        #         print("different feature-label")
+        #         print(f[0])
+        #         print(len(f[0]))
+        #         print(l)
+        #         print(len(l))
+        #         break
         return x, y
 
     def load_files(self) -> Tuple[List[str], List[str]]:

@@ -49,9 +49,9 @@ python cws/train.py \
     --gradient_clip_val 0.5 \
     --dataset $1 \
     --freeze \
-    --lr 0.04 \
-    --embeddings_file $EMB
-    #--lr 0.0002 \
+    --lr 0.0002 \
+    #--embeddings_file $EMB
+    # --lr 0.04 \
     #--embeddings_file $EMB \
 
 sleep 1
