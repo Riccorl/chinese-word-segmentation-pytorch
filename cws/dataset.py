@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         """
         features, labels = self.load_files()
         x = [self._process_text(f, self.max_length) for f in features]
-        y = [self._convert_labels(f, self.max_length) for f in labels]
+        y = [self._convert_labels(l, self.max_length) for l in labels]
         return x, y
 
     def load_files(self) -> Tuple[List[str], List[str]]:
