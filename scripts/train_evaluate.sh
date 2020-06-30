@@ -16,7 +16,7 @@ source /home/ric/miniconda3/bin/activate pt
 #   - hfl/chinese-roberta-wwm-ext
 
 # variables
-BASE_PATH="/home/ric/external/datadrive/Datasets/chinese-word-seg/v2"
+BASE_PATH="/home/ric/external/datadrive/Datasets/chinese-word-seg/processed"
 INPUT_FILE="$BASE_PATH/training/$1_training.utf8"
 TEST_FILE="$BASE_PATH/testing/$1_test.utf8"
 GOLD_FILE="$BASE_PATH/gold/$1_test_gold.utf8"
@@ -29,7 +29,7 @@ if [ -z "$2" ]; then
     # prevents python script crash
     LM="bert-base-chinese"
 fi
-EPOCHS=10
+EPOCHS=30
 BATCH_SIZE=32
 N_LAYER=2
 HIDDEN_SIZE=256
@@ -44,14 +44,13 @@ python cws/train.py \
     --max_len $MAX_LEN \
     --bert_mode concat \
     --gpus 1 \
-    --run 6 \
+    --run 5 \
     --language_model $LM \
     --gradient_clip_val 0.5 \
     --dataset $1 \
     --freeze \
-    --lr 0.0002 \
-    #--embeddings_file $EMB
-    # --lr 0.04 \
+    --lr 0.04
+    #--lr 0.0002 \
     #--embeddings_file $EMB \
 
 sleep 1

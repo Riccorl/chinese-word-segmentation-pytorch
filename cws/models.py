@@ -3,14 +3,13 @@ from argparse import ArgumentParser
 from functools import partial
 
 import gensim
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import transformers as tr
 from torch.utils.data import DataLoader
 
-import transformers as tr
 from dataset import DatasetLM, DatasetLSTM
 
 
@@ -28,11 +27,11 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.AutoModel.from_pretrained(
             self.hparams.language_model, config=config
         )
-        # print(self.lmodel.trainable)
+        #print(self.lmodel.trainable)
         self.hparams.lstm_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
             self.hparams.lstm_size *= 4
-
+        
         self.lstms = nn.LSTM(
             self.hparams.lstm_size,
             self.hparams.hidden_size,
@@ -88,18 +87,15 @@ class ChineseSegmenter(pl.LightningModule):
         self.data = self._load_data(
             self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
         )
-        self.lmodel.resize_token_embeddings(len(self.data.tokenizer))
         self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
         # optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
-        optimizer = optim.SGD(
-            self.parameters(), lr=self.hparams.lr, momentum=0.95, weight_decay=0.01
+        optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=1# , patience=2, verbose=True
         )
-        # scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        #     optimizer, T_0=1  # , patience=2, verbose=True
-        # )
-        return [optimizer]  # , [scheduler]
+        return [optimizer], [scheduler]
 
     def train_dataloader(self):
         params = self._get_loader_params()
@@ -188,10 +184,10 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         self.word_vectors = gensim.models.KeyedVectors.load_word2vec_format(
             self.hparams.embeddings_file, binary=True
         )
-        self.embeddings = self._get_embeddings_layer(
-            self.word_vectors.vectors, self.hparams.freeze
+        weights = torch.FloatTensor(self.word_vectors.vectors)
+        self.embeddings = nn.Embedding.from_pretrained(
+            weights, padding_idx=0, freeze=False
         )
-
         self.lstms = nn.LSTM(
             self.word_vectors.vector_size * 2,
             self.hparams.hidden_size,
@@ -239,20 +235,6 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
             "pin_memory": True,
             "collate_fn": partial(DatasetLSTM.generate_batch, vocab=self.data.vocab),
         }
-
-    @staticmethod
-    def _get_embeddings_layer(weights, freeze: bool):
-        # zero vector for pad, 1 in position 1
-        pad = np.zeros([1, weights.shape[1]])
-        pad[0][1] = 1
-        # mean vector for unknowns
-        unk = np.mean(weights, axis=0, keepdims=True)
-        # zero vector for <ENG>, 1 in position 42
-        eng = np.zeros([1, weights.shape[1]])
-        eng[0][42] = 1
-        weights = np.concatenate((pad, unk, eng, weights))
-        weights = torch.FloatTensor(weights)
-        return nn.Embedding.from_pretrained(weights, padding_idx=0, freeze=freeze)
 
     @staticmethod
     def _load_data(

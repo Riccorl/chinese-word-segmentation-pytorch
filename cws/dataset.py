@@ -1,4 +1,3 @@
-import abc
 from itertools import chain, tee
 from typing import Dict, List, Sequence, Tuple
 
@@ -29,21 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         """
         features, labels = self.load_files()
         x = [self._process_text(f, self.max_length) for f in features]
-        y = [self._convert_labels(l, self.max_length) for l in labels]
-        # for i,(f,l) in enumerate(zip(x, y)):
-        #     if len(f[0]) != len(f[1]):
-        #         print("Index", i)
-        #         print("Different uni-bi")
-        #         print(f)
-        #         break
-        #     if len(f[0]) != len(l):
-        #         print("Index", i)
-        #         print("different feature-label")
-        #         print(f[0])
-        #         print(len(f[0]))
-        #         print(l)
-        #         print(len(l))
-        #         break
+        y = [self._convert_labels(f, self.max_length) for f in labels]
         return x, y
 
     def load_files(self) -> Tuple[List[str], List[str]]:
@@ -56,7 +41,7 @@ class Dataset(torch.utils.data.Dataset):
         labels_file = filename + "_bies." + ext
         features = self.read_dataset(features_file)
         labels = self.read_dataset(labels_file)
-        avg_len = sum(len(s.split()) for s in features) // len(features)
+        avg_len = sum(len(s) for s in features) // len(features)
         print("Dataset average length:", avg_len)
         self.max_length = avg_len
         return features, labels
@@ -85,7 +70,6 @@ class DatasetLM(Dataset):
         self.tokenizer = tr.BertTokenizer.from_pretrained(
             language_model, tokenize_chinese_chars=True
         )
-        self.tokenizer.add_tokens("<ENG>")
         self.max_length = max_length
         self.features, self.labels = self.process_data()
 
@@ -154,8 +138,8 @@ class DatasetLSTM(DatasetLM):
         :param text: text to preprocess
         :return: a tuple containg the data for the model
         """
-        input_unigrams = [c for c in text.split()]
-        text_bigrams = DatasetLSTM.compute_bigrams(text.split())
+        input_unigrams = [c for c in text]
+        text_bigrams = DatasetLSTM.compute_bigrams(text)
         input_bigrams = [c for c in text_bigrams]
         # cut to max len
         input_unigrams = input_unigrams[:max_length]
@@ -179,12 +163,14 @@ class DatasetLSTM(DatasetLM):
         return converted_line
 
     @staticmethod
-    def vocab_from_w2v(word_vectors: gensim.models.word2vec.Word2Vec) -> Dict[str, int]:
+    def vocab_from_w2v(
+        word_vectors: gensim.models.word2vec.Word2Vec
+    ) -> Dict[str, int]:
         """
         :param word2vec: trained Gensim Word2Vec model
         :return: a dictionary from token to int
         """
-        vocab = {"<PAD>": 0, "<UNK>": 1, "<ENG>": 2}
+        vocab = {"<PAD>": 0, "<UNK>": 1}
         for index, word in enumerate(word_vectors.wv.index2word):
             vocab[word] = index + 2
         return vocab
