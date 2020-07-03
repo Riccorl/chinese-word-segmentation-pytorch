@@ -90,16 +90,13 @@ class ChineseSegmenter(pl.LightningModule):
         results = {"progress_bar": logs}
         return results
 
-    # def prepare_data(self):
-    #     self.train_set, self.val_set = self._split_data(self.data)
-
     def configure_optimizers(self):
-        # optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
-        # optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
-        # scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        #     optimizer, T_0=1  # , patience=2, verbose=True
-        # )
-        optimizer = tr.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
+        if self.hparams.optimizer == "sgd":
+            optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
+        else:
+            optimizer = tr.AdamW(
+                self.parameters(), lr=self.hparams.lr, weight_decay=0.01
+            )
         scheduler = tr.get_cosine_schedule_with_warmup(
             optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
         )
@@ -178,6 +175,12 @@ class ChineseSegmenter(pl.LightningModule):
         )
         parser.add_argument(
             "--model_path", help="where to save model checkpoints", default="./models",
+        )
+        parser.add_argument(
+            "--optimizer",
+            help="which optimizer to use",
+            default="sgd",
+            choices=["sgd", "adamw"],
         )
         return parser
 
