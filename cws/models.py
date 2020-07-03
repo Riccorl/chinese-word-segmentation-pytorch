@@ -28,7 +28,9 @@ class ChineseSegmenter(pl.LightningModule):
         self.lmodel = tr.AutoModel.from_pretrained(
             self.hparams.language_model, config=config
         )
-        # print(self.lmodel.trainable)
+        if self.hparams.freeze:
+            self.freeze_lm(lmodel)
+
         self.hparams.lstm_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
             self.hparams.lstm_size *= 4
@@ -49,6 +51,10 @@ class ChineseSegmenter(pl.LightningModule):
             self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
         )
         self.train_set, self.val_set = self._split_data(self.data)
+
+    def freeze_lm(self, lmodel):
+        for param in lmodel.base_model.parameters():
+            param.requires_grad = False
 
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(
@@ -182,6 +188,9 @@ class ChineseSegmenter(pl.LightningModule):
             default="sgd",
             choices=["sgd", "adamw"],
         )
+        parser.add_argument(
+            "--freeze", help="unfreeze embeddings ", action="store_true"
+        )
         return parser
 
 
@@ -237,12 +246,6 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
         return {"val_loss": loss}
 
-    # def prepare_data(self):
-    #     self.data = self._load_data(
-    #         self.hparams.input_file, self.word_vectors, self.hparams.max_len
-    #     )
-    #     self.train_set, self.val_set = self._split_data(self.data)
-
     def _get_loader_params(self, train=True):
         return {
             "batch_size": self.hparams.batch_size,
@@ -273,7 +276,4 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--embeddings_file", help="The path of the embeddings file")
-        parser.add_argument(
-            "--freeze", help="unfreeze embeddings ", action="store_true"
-        )
         return parser
