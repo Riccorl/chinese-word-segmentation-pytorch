@@ -50,26 +50,23 @@ def main():
     early_stop_callback = EarlyStopping(
         monitor="val_loss", patience=4, verbose=True, mode="min"
     )
-    if not model.hparams.lr:
-        # Run learning rate finder
-        model.hparams.lr = 0.001  # default adam, if None, auto-lr crash
-    
     trainer = pl.Trainer.from_argparse_args(
         hparams,
         default_root_dir=os.path.join(os.getcwd(), "logs"),
         early_stop_callback=early_stop_callback,
         checkpoint_callback=checkpoint_callback,
-        auto_lr_find=True
     )
 
-    
-    #     print("No learning rate provided, finding optimal lr")
-    #     lr_finder = trainer.lr_find(model)
-    #     optim_lr = lr_finder.suggestion()
-    #     print()
-    #     print("Optimized learning rate", optim_lr)
-    #     print()
-    #     model.hparams.lr = optim_lr
+    if not model.hparams.lr:
+        # Run learning rate finder
+        model.hparams.lr = 0.001  # default adam, if None, crash
+        print("No learning rate provided, finding optimal lr")
+        lr_finder = trainer.lr_find(model)
+        optim_lr = lr_finder.suggestion()
+        print()
+        print("Optimized learning rate", optim_lr)
+        print()
+        model.hparams.lr = optim_lr
 
         # if optim_lr < model.hparams.lr:
         #     model.hparams.lr = optim_lr
