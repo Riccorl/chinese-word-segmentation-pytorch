@@ -58,9 +58,9 @@ def main():
         auto_lr_find=True
     )
 
-    # if not model.hparams.lr:
-    #     # Run learning rate finder
-    #     model.hparams.lr = 0.001  # default adam, if None, crash
+    if not model.hparams.lr:
+        # Run learning rate finder
+        model.hparams.lr = 0.001  # default adam, if None, crash
     #     print("No learning rate provided, finding optimal lr")
     #     lr_finder = trainer.lr_find(model)
     #     optim_lr = lr_finder.suggestion()
