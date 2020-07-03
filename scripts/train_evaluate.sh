@@ -32,7 +32,7 @@ fi
 EPOCHS=30
 BATCH_SIZE=32
 N_LAYER=2
-HIDDEN_SIZE=256
+HIDDEN_SIZE=128
 MAX_LEN=120
 # train
 python cws/train.py \
@@ -45,12 +45,12 @@ python cws/train.py \
     --gpus 1 \
     --run 5 \
     --language_model $LM \
-    --gradient_clip_val 0.5 \
     --dataset $1 \
     --freeze \
-    #--embeddings_file $EMB \
+    --embeddings_file $EMB \
+    # --gradient_clip_val 0.5 \
     # --lr 0.04
-    #--lr 0.0002 \
+    # --lr 0.0002 \
 
 sleep 1
 BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)
