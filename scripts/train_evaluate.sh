@@ -41,7 +41,6 @@ python cws/train.py \
     --max_epochs $EPOCHS \
     --hidden_size $HIDDEN_SIZE \
     --num_layer $N_LAYER \
-    --max_len $MAX_LEN \
     --bert_mode concat \
     --gpus 1 \
     --run 5 \
@@ -49,9 +48,9 @@ python cws/train.py \
     --gradient_clip_val 0.5 \
     --dataset $1 \
     --freeze \
-    --lr 0.04
-    #--lr 0.0002 \
     #--embeddings_file $EMB \
+    # --lr 0.04
+    #--lr 0.0002 \
 
 sleep 1
 BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)

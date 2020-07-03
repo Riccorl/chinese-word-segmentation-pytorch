@@ -67,8 +67,8 @@ class DatasetLM(Dataset):
     ):
         super().__init__(file_path)
         # self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
-        self.tokenizer = tr.BertTokenizer.from_pretrained(
-            language_model, tokenize_chinese_chars=True
+        self.tokenizer = tr.BertTokenizerFast.from_pretrained(
+            language_model  # , tokenize_chinese_chars=True
         )
         self.max_length = max_length
         self.features, self.labels = self.process_data()
@@ -80,12 +80,14 @@ class DatasetLM(Dataset):
         :param text: text to preprocess
         :return: a dictionaty containg the data for the model
         """
-        inputs = self.tokenizer.encode_plus(
+        inputs = self.tokenizer(
             [c for c in text],
             return_token_type_ids=True,
             return_attention_mask=True,
             max_length=max_length,
-            pad_to_max_length=True,
+            padding='max_length',
+            truncation=True,
+            is_pretokenized=True,
         )
         return inputs.data
 
@@ -142,13 +144,13 @@ class DatasetLSTM(DatasetLM):
         text_bigrams = DatasetLSTM.compute_bigrams(text)
         input_bigrams = [c for c in text_bigrams]
         # cut to max len
-        # input_unigrams = input_unigrams[:max_length]
-        # input_bigrams = input_bigrams[:max_length]
+        input_unigrams = input_unigrams[:max_length]
+        input_bigrams = input_bigrams[:max_length]
         # pad sequences
-        # if pad and len(input_unigrams) < max_length:
-        #     input_unigrams += ["<PAD>"] * (max_length - len(input_unigrams))
-        # if pad and len(input_bigrams) < max_length:
-        #     input_bigrams += ["<PAD>"] * (max_length - len(input_bigrams))
+        if pad and len(input_unigrams) < max_length:
+            input_unigrams += ["<PAD>"] * (max_length - len(input_unigrams))
+        if pad and len(input_bigrams) < max_length:
+            input_bigrams += ["<PAD>"] * (max_length - len(input_bigrams))
         return input_unigrams, input_bigrams
 
     def _convert_labels(self, bies_line: str, max_length: int) -> Sequence[int]:
@@ -157,9 +159,9 @@ class DatasetLSTM(DatasetLM):
         :param bies_line: BIES line in input
         :return: the same line with numerical labels
         """
-        converted_line = [self.bies_dict[c] for c in bies_line]
-        # if len(converted_line) < max_length:
-        #     converted_line += [0] * (max_length - len(converted_line))
+        converted_line = [self.bies_dict[c] for c in bies_line[:max_length]]
+        if len(converted_line) < max_length:
+            converted_line += [0] * (max_length - len(converted_line))
         return converted_line
 
     @staticmethod
@@ -192,24 +194,14 @@ class DatasetLSTM(DatasetLM):
         return ["".join(t) for t in zip(a, b)]
 
     @staticmethod
-    def generate_batch(batch, vocab, max_length: int):
-        batch_max_len = min(max_length, len(batch, key=len))
-        input_unigrams = [
-            DatasetLSTM._encode_sequence(b[0][0], vocab, batch_max_len) for b in batch
-        ]
-        input_bigrams = [
-            DatasetLSTM._encode_sequence(b[0][1], vocab, batch_max_len) for b in batch
-        ]
+    def generate_batch(batch, vocab):
+        input_unigrams = [DatasetLSTM._encode_sequence(b[0][0], vocab) for b in batch]
+        input_bigrams = [DatasetLSTM._encode_sequence(b[0][1], vocab) for b in batch]
         input_unigrams = torch.tensor(input_unigrams)
         input_bigrams = torch.tensor(input_bigrams)
-        labels = torch.tensor([DatasetLSTM._encode_label(b[1]) for b in batch])
+        labels = torch.tensor([b[1] for b in batch])
         return (input_unigrams, input_bigrams), labels
 
     @staticmethod
-    def _encode_label(label, max_length: int):
-        return label[:max_length] + [0] * (max_length - len(label))
-
-    @staticmethod
-    def _encode_sequence(text: str, vocab: Dict, max_length: int):
-        text = text[:max_length] + ["<PAD>"] * (max_length - len(text))
+    def _encode_sequence(text: str, vocab: Dict):
         return [vocab[ngram] if ngram in vocab else vocab["<UNK>"] for ngram in text]
