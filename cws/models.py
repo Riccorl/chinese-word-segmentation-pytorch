@@ -29,7 +29,7 @@ class ChineseSegmenter(pl.LightningModule):
             self.hparams.language_model, config=config
         )
         if self.hparams.freeze:
-            self.freeze_lm(lmodel)
+            self.freeze_lm(self.lmodel)
 
         self.hparams.lstm_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
