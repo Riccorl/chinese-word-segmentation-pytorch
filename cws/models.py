@@ -205,6 +205,12 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         self.dropout = nn.Dropout(0.4)
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
+        # data
+        self.data = self._load_data(
+            self.hparams.input_file, self.word_vectors, self.hparams.max_len
+        )
+        self.train_set, self.val_set = self._split_data(self.data)
+
     def forward(self, inputs, *args, **kwargs):
         unigrams, bigrams = inputs
         outputs_unigrams = self.embeddings(unigrams)
@@ -228,11 +234,11 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         loss = self.criterion(y_hat.view(-1, 5), y.view(-1))
         return {"val_loss": loss}
 
-    def prepare_data(self):
-        self.data = self._load_data(
-            self.hparams.input_file, self.word_vectors, self.hparams.max_len
-        )
-        self.train_set, self.val_set = self._split_data(self.data)
+    # def prepare_data(self):
+    #     self.data = self._load_data(
+    #         self.hparams.input_file, self.word_vectors, self.hparams.max_len
+    #     )
+    #     self.train_set, self.val_set = self._split_data(self.data)
 
     def _get_loader_params(self, train=True):
         return {
