@@ -79,6 +79,6 @@ if __name__ == "__main__":
     start = time.time()
     best_model_path = main()
     end = time.time()
-    print(utils.timer(start, end))
+    print("Total training time:", utils.timer(start, end))
     with open("predictions/best_model_path.txt", "w") as fh:
         fh.write(best_model_path)

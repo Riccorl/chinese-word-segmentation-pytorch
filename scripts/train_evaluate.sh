@@ -29,7 +29,7 @@ if [ -z "$2" ]; then
     # prevents python script crash
     LM="bert-base-chinese"
 fi
-EPOCHS=40
+EPOCHS=60
 BATCH_SIZE=32
 N_LAYER=2
 HIDDEN_SIZE=128
@@ -43,14 +43,14 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 8 \
+    --run 9 \
     --language_model $LM \
     --dataset $1 \
     --freeze \
     --embeddings_file $EMB \
     --optimizer "sgd" \
+    --lr 0.04
     # --gradient_clip_val 0.5 \
-    # --lr 0.04
     # --lr 0.0002 \
 
 sleep 1
