@@ -44,6 +44,12 @@ class ChineseSegmenter(pl.LightningModule):
         self.dropout = nn.Dropout(0.6)
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
+        # data
+        self.data = self._load_data(
+            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
+        )
+        self.train_set, self.val_set = self._split_data(self.data)
+
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(
             inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
@@ -84,11 +90,8 @@ class ChineseSegmenter(pl.LightningModule):
         results = {"progress_bar": logs}
         return results
 
-    def prepare_data(self):
-        self.data = self._load_data(
-            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
-        )
-        self.train_set, self.val_set = self._split_data(self.data)
+    # def prepare_data(self):
+    #     self.train_set, self.val_set = self._split_data(self.data)
 
     def configure_optimizers(self):
         # optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
@@ -97,8 +100,8 @@ class ChineseSegmenter(pl.LightningModule):
         #     optimizer, T_0=1  # , patience=2, verbose=True
         # )
         optimizer = tr.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
-        scheduler = tr.get_constant_schedule_with_warmup(
-            optimizer, num_warmup_steps=2#, num_training_steps=len(self.train_set)
+        scheduler = tr.get_cosine_schedule_with_warmup(
+            optimizer, num_warmup_steps=5, num_training_steps=len(self.train_set)
         )
         return [optimizer], [scheduler]
 
