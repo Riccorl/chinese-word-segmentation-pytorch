@@ -99,9 +99,10 @@ class ChineseSegmenter(pl.LightningModule):
         # scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         #     optimizer, T_0=1  # , patience=2, verbose=True
         # )
+        print("Num train step:", num_training_steps)
         optimizer = tr.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=0.01)
         scheduler = tr.get_cosine_schedule_with_warmup(
-            optimizer, num_warmup_steps=5, num_training_steps=self.hparams.epochs
+            optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
         )
         return [optimizer], [scheduler]
 
