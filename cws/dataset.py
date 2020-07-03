@@ -84,7 +84,7 @@ class DatasetLM(Dataset):
             [c for c in text],
             return_token_type_ids=True,
             return_attention_mask=True,
-            max_length=max_length,
+            max_length=max_length - 2,
             padding='max_length',
             truncation=True,
             is_pretokenized=True,

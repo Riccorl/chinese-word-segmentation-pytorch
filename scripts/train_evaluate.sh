@@ -46,10 +46,10 @@ python cws/train.py \
     --run 9 \
     --language_model $LM \
     --dataset $1 \
-    --freeze \
     --embeddings_file $EMB \
     --optimizer "sgd" \
     --lr 0.04
+    # --freeze \
     # --gradient_clip_val 0.5 \
     # --lr 0.0002 \
 
