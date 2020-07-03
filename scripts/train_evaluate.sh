@@ -29,7 +29,7 @@ if [ -z "$2" ]; then
     # prevents python script crash
     LM="bert-base-chinese"
 fi
-EPOCHS=30
+EPOCHS=40
 BATCH_SIZE=32
 N_LAYER=2
 HIDDEN_SIZE=128
