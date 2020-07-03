@@ -45,10 +45,10 @@ class ChineseSegmenter(pl.LightningModule):
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
         # data
-        self.data = self._load_data(
-            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
-        )
-        self.train_set, self.val_set = self._split_data(self.data)
+        # self.data = self._load_data(
+        #     self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
+        # )
+        # self.train_set, self.val_set = self._split_data(self.data)
 
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(
@@ -90,6 +90,11 @@ class ChineseSegmenter(pl.LightningModule):
         results = {"progress_bar": logs}
         return results
 
+    def setup(self):
+        self.data = self._load_data(
+            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
+        )
+        self.train_set, self.val_set = self._split_data(self.data)
     # def prepare_data(self):
     #     self.train_set, self.val_set = self._split_data(self.data)
 
