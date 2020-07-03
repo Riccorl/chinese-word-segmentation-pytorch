@@ -12,6 +12,9 @@ from models import ChineseSegmenter, ChineseSegmenterLSTM
 
 
 def main():
+    # fix until transformers fixes its bug
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     parser = ArgumentParser()
     parser.add_argument("--run", help="run of the model", default=1)
@@ -67,11 +70,6 @@ def main():
         print("Optimized learning rate", optim_lr)
         print()
         model.hparams.lr = optim_lr
-
-        # if optim_lr < model.hparams.lr:
-        #     model.hparams.lr = optim_lr
-        # else:
-        #     print("suggested lr too high, keeping default one")
     trainer.fit(model)
     print("best model:", checkpoint_callback.best_model_path)
     return checkpoint_callback.best_model_path
