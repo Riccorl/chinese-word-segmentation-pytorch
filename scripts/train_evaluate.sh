@@ -47,8 +47,8 @@ python cws/train.py \
     --language_model $LM \
     --dataset $1 \
     --embeddings_file $EMB \
-    --optimizer "sgd" \
-    --lr 0.04
+    --optimizer "adamw" \
+    #--lr 0.04
     # --freeze \
     # --gradient_clip_val 0.5 \
     # --lr 0.0002 \

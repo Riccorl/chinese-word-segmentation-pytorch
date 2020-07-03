@@ -84,7 +84,7 @@ class DatasetLM(Dataset):
             [c for c in text],
             return_token_type_ids=True,
             return_attention_mask=True,
-            max_length=max_length - 2,
+            max_length=max_length,
             padding='max_length',
             truncation=True,
             is_pretokenized=True,
@@ -97,7 +97,7 @@ class DatasetLM(Dataset):
         :param bies_line: BIES line in input
         :return: the same line with numerical labels
         """
-        converted_line = [self.bies_dict[c] for c in bies_line[: max_length - 2]]
+        converted_line = [self.bies_dict[c] for c in bies_line[: max_length]]
         converted_line = [0] + converted_line + [0]
         if len(converted_line) < max_length:
             converted_line += [0] * (max_length - len(converted_line))
