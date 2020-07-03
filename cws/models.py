@@ -244,7 +244,7 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     def _get_embeddings_layer(weights, freeze: bool):
         # zero vector for pad, 1 in position 1
         pad = np.zeros([1, weights.shape[1]])
-        pad[1] = 1
+        pad[0][1] = 1
         # mean vector for unknowns
         unk = np.mean(weights, axis=0, keepdims=True)
         weights = np.concatenate((pad, unk, weights))
