@@ -106,7 +106,7 @@ class ChineseSegmenter(pl.LightningModule):
         scheduler = tr.get_cosine_schedule_with_warmup(
             optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
         )
-        return [optimizer], [scheduler]
+        return [optimizer]#, [scheduler]
 
     def train_dataloader(self):
         params = self._get_loader_params()
