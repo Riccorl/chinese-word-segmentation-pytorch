@@ -101,13 +101,16 @@ class ChineseSegmenter(pl.LightningModule):
         if self.hparams.optimizer == "sgd":
             optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
         else:
-            optimizer = optim.AdamW(
+            optimizer = tr.AdamW(
                 self.parameters(), lr=self.hparams.lr, weight_decay=0.01
             )
-        # scheduler = tr.get_cosine_schedule_with_warmup(
-        #     optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
-        # )
-        return [optimizer] #, [scheduler]
+        return_values = [optimizer]
+        if self.hparams.scheduler:
+            scheduler = tr.get_cosine_schedule_with_warmup(
+                optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
+            )
+            return_values = ([optimizer], [scheduler])
+        return return_values # [optimizer] #, [scheduler]
 
     def train_dataloader(self):
         params = self._get_loader_params()
@@ -191,6 +194,9 @@ class ChineseSegmenter(pl.LightningModule):
         )
         parser.add_argument(
             "--freeze", help="unfreeze embeddings ", action="store_true"
+        )
+        parser.add_argument(
+            "--scheduler", help="use scheduler to control lr value", action="store_true"
         )
         return parser
 
