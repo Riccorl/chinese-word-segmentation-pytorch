@@ -100,7 +100,7 @@ class ChineseSegmenter(pl.LightningModule):
         if self.hparams.optimizer == "sgd":
             optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
         else:
-            optimizer = tr.AdamW(
+            optimizer = optim.AdamW(
                 self.parameters(), lr=self.hparams.lr, weight_decay=0.01
             )
         scheduler = tr.get_cosine_schedule_with_warmup(
