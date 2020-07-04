@@ -29,6 +29,7 @@ class ChineseSegmenter(pl.LightningModule):
             self.hparams.language_model, config=config
         )
         if self.hparams.freeze:
+            print("Freezeing lm weights")
             self.freeze_lm(self.lmodel)
 
         self.hparams.lstm_size = self.lmodel.config.hidden_size
@@ -103,10 +104,10 @@ class ChineseSegmenter(pl.LightningModule):
             optimizer = optim.AdamW(
                 self.parameters(), lr=self.hparams.lr, weight_decay=0.01
             )
-        scheduler = tr.get_cosine_schedule_with_warmup(
-            optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
-        )
-        return [optimizer]#, [scheduler]
+        # scheduler = tr.get_cosine_schedule_with_warmup(
+        #     optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
+        # )
+        return [optimizer] #, [scheduler]
 
     def train_dataloader(self):
         params = self._get_loader_params()
@@ -120,7 +121,7 @@ class ChineseSegmenter(pl.LightningModule):
         return {
             "batch_size": self.hparams.batch_size,
             "shuffle": train,
-            "num_workers": 8,
+            "num_workers": 12,
             "pin_memory": True,
             "collate_fn": DatasetLM.generate_batch,
         }
@@ -250,7 +251,7 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         return {
             "batch_size": self.hparams.batch_size,
             "shuffle": train,
-            "num_workers": 8,
+            "num_workers": 12,
             "pin_memory": True,
             "collate_fn": partial(DatasetLSTM.generate_batch, vocab=self.data.vocab),
         }
