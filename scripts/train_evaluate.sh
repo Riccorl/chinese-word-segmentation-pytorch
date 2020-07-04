@@ -32,7 +32,7 @@ fi
 EPOCHS=60
 BATCH_SIZE=32
 N_LAYER=2
-HIDDEN_SIZE=128
+HIDDEN_SIZE=256
 MAX_LEN=120
 # train
 python cws/train.py \
@@ -43,14 +43,14 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 9 \
+    --run 13 \
     --language_model $LM \
     --dataset $1 \
-    --embeddings_file $EMB \
     --optimizer "adamw" \
-    #--lr 0.04
+    --lr 0.0005
+    --gradient_clip_val 0.5 \
+    #--embeddings_file $EMB \
     # --freeze \
-    # --gradient_clip_val 0.5 \
     # --lr 0.0002 \
 
 sleep 1

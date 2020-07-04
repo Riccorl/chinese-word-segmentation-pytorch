@@ -39,11 +39,11 @@ class ChineseSegmenter(pl.LightningModule):
             self.hparams.lstm_size,
             self.hparams.hidden_size,
             num_layers=self.hparams.num_layers,
-            dropout=0.6 if self.hparams.num_layers > 1 else 0,
+            dropout=0.5 if self.hparams.num_layers > 1 else 0,
             bidirectional=True,
         )
 
-        self.dropout = nn.Dropout(0.6)
+        self.dropout = nn.Dropout(0.4)
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
         # data
