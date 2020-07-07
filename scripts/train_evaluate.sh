@@ -43,12 +43,14 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 15 \
+    --run 21 \
     --language_model $LM \
     --dataset $1 \
     --optimizer "adamw" \
-    --gradient_clip_val 0.5 \
-    #--lr 0.0005
+    --gradient_clip_val 1.0 \
+    --schedule \
+    --optimized_decay
+    # --lr 0.0002
     #--embeddings_file $EMB \
     # --freeze \
     # --lr 0.0002 \

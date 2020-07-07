@@ -43,7 +43,7 @@ class Dataset(torch.utils.data.Dataset):
         labels = self.read_dataset(labels_file)
         avg_len = sum(len(s) for s in features) // len(features)
         print("Dataset average length:", avg_len)
-        self.max_length = avg_len
+        self.max_length = avg_len + (avg_len // 3)
         return features, labels
 
     @staticmethod
@@ -67,9 +67,7 @@ class DatasetLM(Dataset):
     ):
         super().__init__(file_path)
         # self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
-        self.tokenizer = tr.BertTokenizerFast.from_pretrained(
-            language_model  # , tokenize_chinese_chars=True
-        )
+        self.tokenizer = tr.BertTokenizerFast.from_pretrained(language_model)
         self.max_length = max_length
         self.features, self.labels = self.process_data()
 
@@ -85,7 +83,7 @@ class DatasetLM(Dataset):
             return_token_type_ids=True,
             return_attention_mask=True,
             max_length=max_length,
-            padding='max_length',
+            padding="max_length",
             truncation=True,
             is_pretokenized=True,
         )

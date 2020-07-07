@@ -13,7 +13,7 @@ from models import ChineseSegmenter, ChineseSegmenterLSTM
 
 def main():
     # fix until transformers fixes its bug
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     parser = ArgumentParser()

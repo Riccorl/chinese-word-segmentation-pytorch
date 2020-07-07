@@ -32,20 +32,12 @@ class ChineseSegmenter(pl.LightningModule):
             print("Freezeing lm weights")
             self.freeze_lm(self.lmodel)
 
-        self.hparams.lstm_size = self.lmodel.config.hidden_size
+        self.hparams.hidden_size = self.lmodel.config.hidden_size
         if self.hparams.bert_mode == "concat":
-            self.hparams.lstm_size *= 4
+            self.hparams.hidden_size *= 4
 
-        self.lstms = nn.LSTM(
-            self.hparams.lstm_size,
-            self.hparams.hidden_size,
-            num_layers=self.hparams.num_layers,
-            dropout=0.5 if self.hparams.num_layers > 1 else 0,
-            bidirectional=True,
-        )
-
-        self.dropout = nn.Dropout(0.4)
-        self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
+        self.dropout = nn.Dropout(0.2)
+        self.classifier = nn.Linear(self.hparams.hidden_size, 5)
 
         # data
         self.data = self._load_data(
@@ -69,7 +61,6 @@ class ChineseSegmenter(pl.LightningModule):
         elif self.hparams.bert_mode == "sum":
             outputs = outputs[2][-4:]
             outputs = torch.stack(outputs, dim=0).sum(dim=0)
-        outputs, _ = self.lstms(outputs)
         if self.training:
             outputs = self.dropout(outputs)
         outputs = self.classifier(outputs)
@@ -101,16 +92,39 @@ class ChineseSegmenter(pl.LightningModule):
         if self.hparams.optimizer == "sgd":
             optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
         else:
-            optimizer = tr.AdamW(
-                self.parameters(), lr=self.hparams.lr, weight_decay=0.01
-            )
+            parameters = self._optimizer_grouped_parameters()
+            optimizer = tr.AdamW(parameters, lr=self.hparams.lr, weight_decay=0.01)
         return_values = [optimizer]
         if self.hparams.scheduler:
-            scheduler = tr.get_cosine_schedule_with_warmup(
-                optimizer, num_warmup_steps=5, num_training_steps=self.hparams.max_epochs
+            num_warmup_steps = len(self.train_set) // 32 * 3
+            print("Warmpup steps:", num_warmup_steps)
+            num_training_steps = len(self.train_set) // 32 * self.hparams.max_epochs
+            print("Training steps:", num_training_steps)
+            scheduler = tr.get_linear_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=num_warmup_steps,
+                num_training_steps=num_training_steps,
             )
             return_values = ([optimizer], [scheduler])
-        return return_values # [optimizer] #, [scheduler]
+        return return_values  # [optimizer], [scheduler]
+
+    def _optimizer_grouped_parameters(self):
+        no_decay = ["bias", "LayerNorm.weight"]
+        params = [
+            p for n, p in self.named_parameters() if not any(nd in n for nd in no_decay)
+        ]
+        no_params = [
+            p for n, p in self.named_parameters() if any(nd in n for nd in no_decay)
+        ]
+        optimizer_grouped_parameters = [
+            {"params": params, "weight_decay": 0.01},
+            {"params": no_params, "weight_decay": 0.0},
+        ]
+        return (
+            optimizer_grouped_parameters
+            if self.hparams.optimized_decay
+            else self.parameters()
+        )
 
     def train_dataloader(self):
         params = self._get_loader_params()
@@ -197,6 +211,11 @@ class ChineseSegmenter(pl.LightningModule):
         )
         parser.add_argument(
             "--scheduler", help="use scheduler to control lr value", action="store_true"
+        )
+        parser.add_argument(
+            "--optimized_decay",
+            help="weight decay on subset of model params",
+            action="store_true",
         )
         return parser
 
