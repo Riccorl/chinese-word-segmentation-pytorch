@@ -24,17 +24,16 @@ DICT_FILE="$BASE_PATH/gold/$1_training_words.utf8"
 PREDICT_FILE="predictions/$1_pred.utf8"
 EMB="resources/bigram_unigram300.bin"
 LM=$2
+EPOCHS=60
+BATCH_SIZE=32
+N_LAYER=1
+HIDDEN_SIZE=256
+# train
 if [ -z "$2" ]; then
     # default value, not used if not present.
     # prevents python script crash
     LM="bert-base-chinese"
 fi
-EPOCHS=60
-BATCH_SIZE=32
-N_LAYER=2
-HIDDEN_SIZE=256
-MAX_LEN=120
-# train
 python cws/train.py \
     --input_file $INPUT_FILE \
     --batch_size $BATCH_SIZE \
@@ -43,14 +42,14 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 21 \
+    --run 25 \
     --language_model $LM \
     --dataset $1 \
     --optimizer "adamw" \
-    --gradient_clip_val 1.0 \
+    --gradient_clip_val 0.5 \
     --schedule \
-    --optimized_decay
-    # --lr 0.0002
+    --optimized_decay \
+    --lr 0.001 \
     #--embeddings_file $EMB \
     # --freeze \
     # --lr 0.0002 \

@@ -36,7 +36,7 @@ class ChineseSegmenter(pl.LightningModule):
         if self.hparams.bert_mode == "concat":
             self.hparams.hidden_size *= 4
 
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.3)
         self.classifier = nn.Linear(self.hparams.hidden_size, 5)
 
         # data
@@ -93,12 +93,14 @@ class ChineseSegmenter(pl.LightningModule):
             optimizer = optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.95)
         else:
             parameters = self._optimizer_grouped_parameters()
-            optimizer = tr.AdamW(parameters, lr=self.hparams.lr, weight_decay=0.01)
+            optimizer = tr.AdamW(parameters, lr=self.hparams.lr)
         return_values = [optimizer]
         if self.hparams.scheduler:
-            num_warmup_steps = len(self.train_set) // 32 * 3
+            num_warmup_steps = len(self.train_set) // self.hparams.batch_size * 3
             print("Warmpup steps:", num_warmup_steps)
-            num_training_steps = len(self.train_set) // 32 * self.hparams.max_epochs
+            num_training_steps = (
+                len(self.train_set) // self.hparams.batch_size * self.hparams.max_epochs
+            )
             print("Training steps:", num_training_steps)
             scheduler = tr.get_linear_schedule_with_warmup(
                 optimizer,
@@ -172,12 +174,6 @@ class ChineseSegmenter(pl.LightningModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument(
             "--input_file", help="The path of the input file", required=True
-        )
-        parser.add_argument(
-            "--hidden_size", help="LSTM hidden size", type=int, default=512
-        )
-        parser.add_argument(
-            "--num_layers", help="number of LSTM layers", type=int, default=2
         )
         parser.add_argument(
             "--max_len", help="max sentence length", type=int, default=150
@@ -302,4 +298,10 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--embeddings_file", help="The path of the embeddings file")
+        parser.add_argument(
+            "--hidden_size", help="LSTM hidden size", type=int, default=512
+        )
+        parser.add_argument(
+            "--num_layers", help="number of LSTM layers", type=int, default=2
+        )
         return parser

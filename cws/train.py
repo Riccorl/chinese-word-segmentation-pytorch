@@ -51,7 +51,7 @@ def main():
         filepath=model_path, save_top_k=5, verbose=True
     )
     early_stop_callback = EarlyStopping(
-        monitor="val_loss", patience=4, verbose=True, mode="min"
+        monitor="val_loss", patience=3, verbose=True, mode="min"
     )
     trainer = pl.Trainer.from_argparse_args(
         hparams,
