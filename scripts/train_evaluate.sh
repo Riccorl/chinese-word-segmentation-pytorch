@@ -45,12 +45,12 @@ python cws/train.py \
     --run 28 \
     --language_model $LM \
     --dataset $1 \
-    --optimizer "adamw" \
+    --optimizer "sgd" \
     --gradient_clip_val 0.5 \
     --optimized_decay \
     --embeddings_file $EMB \
+    --lr 0.04 \
     --freeze \
-    # --lr 0.001 \
     # --schedule \
     # --lr 0.0002 \
 

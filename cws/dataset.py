@@ -11,6 +11,7 @@ class Dataset(torch.utils.data.Dataset):
         self.bies_dict = {"B": 1, "I": 2, "E": 3, "S": 4}
         self.file_path = file_path
         print(file_path)
+        self.features, self.labels = [], []
 
     def __len__(self):
         return len(self.features)
@@ -43,7 +44,7 @@ class Dataset(torch.utils.data.Dataset):
         labels = self.read_dataset(labels_file)
         avg_len = sum(len(s) for s in features) // len(features)
         print("Dataset average length:", avg_len)
-        self.max_length = 70 #avg_len + (avg_len // 3)
+        self.max_length = avg_len + (avg_len // 3)
         return features, labels
 
     @staticmethod
@@ -66,7 +67,6 @@ class DatasetLM(Dataset):
         max_length: int = 200,
     ):
         super().__init__(file_path)
-        # self.tokenizer = tr.AutoTokenizer.from_pretrained(language_model)
         self.tokenizer = tr.BertTokenizerFast.from_pretrained(language_model)
         self.max_length = max_length
         self.features, self.labels = self.process_data()
@@ -115,7 +115,7 @@ class DatasetLM(Dataset):
         return features, labels
 
 
-class DatasetLSTM(DatasetLM):
+class DatasetLSTM(Dataset):
     def __init__(
         self,
         file_path: str,
