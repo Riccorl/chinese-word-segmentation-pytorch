@@ -25,7 +25,7 @@ PREDICT_FILE="predictions/$1_pred.utf8"
 EMB="resources/bigram_unigram300.bin"
 LM=$2
 EPOCHS=60
-BATCH_SIZE=32
+BATCH_SIZE=64
 N_LAYER=1
 HIDDEN_SIZE=256
 # train
@@ -42,16 +42,16 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 25 \
+    --run 28 \
     --language_model $LM \
     --dataset $1 \
     --optimizer "adamw" \
     --gradient_clip_val 0.5 \
-    --schedule \
     --optimized_decay \
-    --lr 0.001 \
-    #--embeddings_file $EMB \
-    # --freeze \
+    --embeddings_file $EMB \
+    --freeze \
+    # --lr 0.001 \
+    # --schedule \
     # --lr 0.0002 \
 
 sleep 1

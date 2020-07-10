@@ -280,8 +280,8 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
     @staticmethod
     def _get_embeddings_layer(weights, freeze: bool):
         # zero vector for pad, 1 in position 1
-        pad = np.zeros([1, weights.shape[1]])
-        pad[0][1] = 1
+        # random vector for pad
+        pad = np.random.rand(1, weights.shape[1])
         # mean vector for unknowns
         unk = np.mean(weights, axis=0, keepdims=True)
         weights = np.concatenate((pad, unk, weights))
@@ -299,9 +299,9 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--embeddings_file", help="The path of the embeddings file")
         parser.add_argument(
-            "--hidden_size", help="LSTM hidden size", type=int, default=512
+            "--hidden_size", help="LSTM hidden size", type=int, default=256
         )
         parser.add_argument(
-            "--num_layers", help="number of LSTM layers", type=int, default=2
+            "--num_layers", help="number of LSTM layers", type=int, default=1
         )
         return parser

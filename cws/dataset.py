@@ -43,7 +43,7 @@ class Dataset(torch.utils.data.Dataset):
         labels = self.read_dataset(labels_file)
         avg_len = sum(len(s) for s in features) // len(features)
         print("Dataset average length:", avg_len)
-        self.max_length = avg_len + (avg_len // 3)
+        self.max_length = 70 #avg_len + (avg_len // 3)
         return features, labels
 
     @staticmethod
