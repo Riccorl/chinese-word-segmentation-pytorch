@@ -41,7 +41,7 @@ class ChineseSegmenter(pl.LightningModule):
 
         # data
         self.data = self._load_data(
-            self.hparams.input_file, self.hparams.language_model, self.hparams.max_len
+            self.hparams.input_file, self.hparams.language_model
         )
         self.train_set, self.val_set = self._split_data(self.data)
 
@@ -50,9 +50,7 @@ class ChineseSegmenter(pl.LightningModule):
             param.requires_grad = False
 
     def forward(self, inputs, *args, **kwargs):
-        outputs = self.lmodel(
-            inputs["input_ids"], inputs["attention_mask"], inputs["token_type_ids"]
-        )
+        outputs = self.lmodel(**inputs)
         if self.hparams.bert_mode == "none":
             outputs = outputs[0]
         elif self.hparams.bert_mode == "concat":
@@ -156,10 +154,8 @@ class ChineseSegmenter(pl.LightningModule):
         return self.criterion(active_logits, active_labels)
 
     @staticmethod
-    def _load_data(input_file: str, language_model: str, max_length: int):
-        return DatasetLM(
-            input_file, language_model=language_model, max_length=max_length
-        )
+    def _load_data(input_file: str, language_model: str):
+        return DatasetLM(input_file, language_model=language_model)
 
     @staticmethod
     def _split_data(data):
@@ -240,9 +236,7 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         self.classifier = nn.Linear(self.hparams.hidden_size * 2, 5)
 
         # data
-        self.data = self._load_data(
-            self.hparams.input_file, self.word_vectors, self.hparams.max_len
-        )
+        self.data = self._load_data(self.hparams.input_file, self.word_vectors)
         self.train_set, self.val_set = self._split_data(self.data)
 
     def forward(self, inputs, *args, **kwargs):
@@ -289,10 +283,8 @@ class ChineseSegmenterLSTM(ChineseSegmenter):
         return nn.Embedding.from_pretrained(weights, padding_idx=0, freeze=freeze)
 
     @staticmethod
-    def _load_data(
-        input_file: str, word_vectors: gensim.models.word2vec.Word2Vec, max_length: int
-    ):
-        return DatasetLSTM(input_file, word_vectors=word_vectors, max_length=max_length)
+    def _load_data(input_file: str, word_vectors: gensim.models.word2vec.Word2Vec):
+        return DatasetLSTM(input_file, word_vectors=word_vectors)
 
     @staticmethod
     def add_model_specific_args(parent_parser):

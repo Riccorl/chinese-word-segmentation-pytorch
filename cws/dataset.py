@@ -12,6 +12,7 @@ class Dataset(torch.utils.data.Dataset):
         self.file_path = file_path
         print(file_path)
         self.features, self.labels = [], []
+        self.max_length = 0
 
     def __len__(self):
         return len(self.features)
@@ -61,14 +62,10 @@ class Dataset(torch.utils.data.Dataset):
 
 class DatasetLM(Dataset):
     def __init__(
-        self,
-        file_path: str,
-        language_model: str = "bert-base-chinese",
-        max_length: int = 200,
+        self, file_path: str, language_model: str = "bert-base-chinese",
     ):
         super().__init__(file_path)
         self.tokenizer = tr.BertTokenizerFast.from_pretrained(language_model)
-        self.max_length = max_length
         self.features, self.labels = self.process_data()
 
     def _process_text(self, text: str, max_length: int) -> Dict[str, Sequence[int]]:
@@ -117,13 +114,9 @@ class DatasetLM(Dataset):
 
 class DatasetLSTM(Dataset):
     def __init__(
-        self,
-        file_path: str,
-        word_vectors: gensim.models.word2vec.Word2Vec,
-        max_length: int = 200,
+        self, file_path: str, word_vectors: gensim.models.word2vec.Word2Vec,
     ):
         super().__init__(file_path)
-        self.max_length = max_length
         self.word_vectors = word_vectors
         # build the vocab from the w2v model
         self.vocab = self.vocab_from_w2v(self.word_vectors)

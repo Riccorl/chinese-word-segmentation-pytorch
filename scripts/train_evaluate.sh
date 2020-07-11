@@ -42,17 +42,16 @@ python cws/train.py \
     --num_layer $N_LAYER \
     --bert_mode concat \
     --gpus 1 \
-    --run 28 \
+    --run 30 \
     --language_model $LM \
     --dataset $1 \
-    --optimizer "sgd" \
+    --optimizer "adamw" \
     --gradient_clip_val 0.5 \
     --optimized_decay \
-    --embeddings_file $EMB \
-    --lr 0.04 \
-    --freeze \
-    # --schedule \
-    # --lr 0.0002 \
+    --lr 0.001 \
+    --schedule \
+    # --freeze \
+    # --embeddings_file $EMB \
 
 sleep 1
 BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)
