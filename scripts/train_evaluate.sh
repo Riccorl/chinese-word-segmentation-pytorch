@@ -1,5 +1,5 @@
 #!/bin/bash
-source /home/ric/miniconda3/bin/activate pt
+source /home/pollo/miniconda3/bin/activate pt-gpu
 
 # args needed
 # input file "/home/ric/external/datadrive/Datasets/chinese-word-seg/processed/training/pku_training.utf8"
@@ -16,7 +16,7 @@ source /home/ric/miniconda3/bin/activate pt
 #   - hfl/chinese-roberta-wwm-ext
 
 # variables
-BASE_PATH="/home/ric/external/datadrive/Datasets/chinese-word-seg/processed"
+BASE_PATH="/mnt/d/Datasets/chinese-word-seg/processed"
 INPUT_FILE="$BASE_PATH/training/$1_training.utf8"
 TEST_FILE="$BASE_PATH/testing/$1_test.utf8"
 GOLD_FILE="$BASE_PATH/gold/$1_test_gold.utf8"
@@ -35,7 +35,7 @@ if [ -z "$2" ]; then
     LM="bert-base-chinese"
 fi
 python cws/train.py \
-    --input_file $INPUT_FILE \
+    --input_file "$INPUT_FILE" \
     --batch_size $BATCH_SIZE \
     --max_epochs $EPOCHS \
     --hidden_size $HIDDEN_SIZE \
@@ -44,7 +44,7 @@ python cws/train.py \
     --gpus 1 \
     --run 30 \
     --language_model $LM \
-    --dataset $1 \
+    --dataset "$1" \
     --optimizer "adamw" \
     --gradient_clip_val 0.5 \
     --optimized_decay \
@@ -57,12 +57,12 @@ sleep 1
 BEST_MODEL_PATH=$(cat predictions/best_model_path.txt)
 echo "Best model path: $BEST_MODEL_PATH"
 # predict
-python cws/predictor.py $TEST_FILE $PREDICT_FILE $BEST_MODEL_PATH
+python cws/predictor.py "$TEST_FILE" "$PREDICT_FILE" "$BEST_MODEL_PATH"
 # evaluate
-if [ "$(wc -l <$PREDICT_FILE)" -eq "$(wc -l <$GOLD_FILE)" ]; then
+if [ "$(wc -l <"$PREDICT_FILE")" -eq "$(wc -l <"$GOLD_FILE")" ]; then
     echo 'Same number of lines, ok'
     echo "scripts/score $DICT_FILE $GOLD_FILE $PREDICT_FILE"
-    scripts/score $DICT_FILE $GOLD_FILE $PREDICT_FILE
+    scripts/score "$DICT_FILE" "$GOLD_FILE" "$PREDICT_FILE"
 else
     echo 'Number of lines mismatch!'
 fi

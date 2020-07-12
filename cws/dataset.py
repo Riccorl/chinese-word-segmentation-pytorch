@@ -1,6 +1,6 @@
 import abc
 from itertools import chain, tee
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple, Iterable
 
 import gensim
 import torch
@@ -24,13 +24,13 @@ class Dataset(torch.utils.data.Dataset):
         y = self.labels[index]
         return x, y
 
-    def process_data(self) -> Tuple[List[str], List[str]]:
+    def process_data(self) -> Tuple[list, List[Sequence[int]]]:
         """
         Load the dataset from files, building features and labels
         :return: list of features and labels
         """
         features, labels = self.load_files()
-        x = [self._process_text(f, self.max_length) for f in features]
+        x = [self.process_text(f, self.max_length) for f in features]
         y = [self._convert_labels(l, self.max_length) for l in labels]
         return x, y
 
@@ -61,11 +61,11 @@ class Dataset(torch.utils.data.Dataset):
             return [line for line in f if line]
 
     @abc.abstractmethod
-    def _process_text(self, text: str, *args) -> Any:
+    def process_text(self, text: str, max_length: int) -> Any:
         pass
 
     @abc.abstractmethod
-    def _convert_labels(self, bies_line: str, max_length: int) -> Sequence[int]:
+    def _convert_labels(self, bies_line: str, max_length: int) -> Any:
         pass
 
 
@@ -77,11 +77,12 @@ class DatasetLM(Dataset):
         self.tokenizer = tr.BertTokenizerFast.from_pretrained(language_model)
         self.features, self.labels = self.process_data()
 
-    def _process_text(self, text: str, max_length: int) -> Dict[str, Sequence[int]]:
+    def process_text(self, text: str, max_length: int) -> Dict[str, Sequence[int]]:
         """
         Preprocess the text according to the language model
         tokenizer
         :param text: text to preprocess
+        :param max_length: maximum length for a sentence
         :return: a dictionaty containg the data for the model
         """
         inputs = self.tokenizer(
@@ -110,7 +111,12 @@ class DatasetLM(Dataset):
     @staticmethod
     def generate_batch(
         batch: Tuple[Dict[str, Sequence[int]], List[Sequence[int]]]
-    ) -> Tuple[Dict[str, Sequence[int]], List[Sequence[int]]]:
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        """
+        Generate the batch for the DataLoader
+        :param batch: batch to process
+        :return: the tuple (unigram, bigram), labels to feed to the model
+        """
         input_ids = torch.tensor([b[0]["input_ids"] for b in batch])
         attention_mask = torch.tensor([b[0]["attention_mask"] for b in batch])
         token_type_ids = torch.tensor([b[0]["token_type_ids"] for b in batch])
@@ -134,12 +140,12 @@ class DatasetLSTM(Dataset):
         self.features, self.labels = self.process_data()
 
     @staticmethod
-    def _process_text(
-        text: str, max_length: int, pad: bool = True
-    ) -> Tuple[Sequence[int], Sequence[int]]:
+    def process_text(text: str, max_length: int, pad: bool = True) -> Tuple[List[str], List[str]]:
         """
         Preprocess the text by computing unigram and bigram
         :param text: text to preprocess
+        :param max_length: maximum length for a sentence
+        :param pad: True if pad is needed
         :return: a tuple containg the data for the model
         """
         input_unigrams = [c for c in text]
@@ -169,7 +175,8 @@ class DatasetLSTM(Dataset):
     @staticmethod
     def vocab_from_w2v(word_vectors: gensim.models.word2vec.Word2Vec) -> Dict[str, int]:
         """
-        :param word2vec: trained Gensim Word2Vec model
+        Builds the vocab from the Word2Vec matrix
+        :param word_vectors: trained Gensim Word2Vec model
         :return: a dictionary from token to int
         """
         vocab = {"<PAD>": 0, "<UNK>": 1}
@@ -178,7 +185,7 @@ class DatasetLSTM(Dataset):
         return vocab
 
     @staticmethod
-    def compute_bigrams(line: str) -> List[str]:
+    def compute_bigrams(line: str) -> Sequence[str]:
         """
         Computes bigrams from the given line
         :param line: line to process
@@ -187,7 +194,7 @@ class DatasetLSTM(Dataset):
         return DatasetLSTM.pairwise(chain(line, ["</s>"]))
 
     @staticmethod
-    def pairwise(iterable: Sequence[Any]) -> Sequence[Any]:
+    def pairwise(iterable: Iterable[Any]) -> Sequence[Any]:
         """
         Returns a list of paired items, overlapping, from the original.
         """
@@ -198,14 +205,26 @@ class DatasetLSTM(Dataset):
     @staticmethod
     def generate_batch(
         batch, vocab: Dict[str, int]
-    ) -> Tuple[Tuple[List[Sequence[int]]], List[Sequence[int]]]:
-        input_unigrams = [DatasetLSTM._encode_sequence(b[0][0], vocab) for b in batch]
-        input_bigrams = [DatasetLSTM._encode_sequence(b[0][1], vocab) for b in batch]
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+        """
+        Generate the batch for the DataLoader
+        :param batch: batch to process
+        :param vocab: Vocab token -> int
+        :return: the tuple (unigram, bigram), labels to feed to the model
+        """
+        input_unigrams = [DatasetLSTM.encode_sequence(b[0][0], vocab) for b in batch]
+        input_bigrams = [DatasetLSTM.encode_sequence(b[0][1], vocab) for b in batch]
         input_unigrams = torch.tensor(input_unigrams)
         input_bigrams = torch.tensor(input_bigrams)
         labels = torch.tensor([b[1] for b in batch])
         return (input_unigrams, input_bigrams), labels
 
     @staticmethod
-    def _encode_sequence(text: str, vocab: Dict) -> Sequence[int]:
+    def encode_sequence(text: List[str], vocab: Dict) -> Sequence[int]:
+        """
+        Encode the sequence follwoing the vocab in input
+        :param text: Text to encode
+        :param vocab: Vocab token -> int
+        :return: the text in input encoded
+        """
         return [vocab[ngram] if ngram in vocab else vocab["<UNK>"] for ngram in text]

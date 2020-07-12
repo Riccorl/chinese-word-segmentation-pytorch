@@ -1,4 +1,3 @@
-import copy
 from argparse import ArgumentParser
 from functools import partial
 
@@ -165,7 +164,7 @@ class ChineseSegmenter(pl.LightningModule):
     def freeze_lm(lmodel):
         for param in lmodel.base_model.parameters():
             param.requires_grad = False
-    
+
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)

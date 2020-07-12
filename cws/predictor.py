@@ -1,3 +1,4 @@
+import abc
 from argparse import ArgumentParser
 from typing import List, Sequence
 
@@ -6,9 +7,8 @@ import torch
 import transformers as tr
 from tqdm import tqdm
 
-from dataset import Dataset, DatasetLM, DatasetLSTM
+from dataset import Dataset, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
-import abc
 
 
 class Predictor:
@@ -19,14 +19,24 @@ class Predictor:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def predict(self, input_path: str, output_path: str):
+        """
+        Generate predictions from the input file
+        :param input_path: input file with one sentence per line
+        :param output_path: file where to write predictions
+        :return:
+        """
         test_file = Dataset.read_dataset(input_path)
         with open(output_path, "w") as out_file:
             for line in tqdm(test_file):
                 words_pred = self.prediction_generator(line)
                 out_file.write("".join(words_pred).strip() + "\n")
 
-    def prediction_generator(self, line: List[str]):
-        line = [c for c in line]
+    def prediction_generator(self, line: str):
+        """
+        Generate prediction from text in input
+        :param line: text to predict
+        :return: the prediction of the model
+        """
         prediction = self._get_predictions(line[: self.model_max_length])
         if len(line) > self.model_max_length:
             prediction_left = self._get_predictions(line[self.model_max_length :])
@@ -38,7 +48,7 @@ class Predictor:
         return words_pred
 
     @abc.abstractmethod
-    def _get_predictions(self, line: str) -> np.array:
+    def _get_predictions(self, line: Sequence[str]) -> np.array:
         pass
 
 
@@ -51,9 +61,14 @@ class PredictorLM(Predictor):
         )
         self.model = self.model.to(self.device)
 
-    def _get_predictions(self, line: Sequence[str]):
+    def _get_predictions(self, line: List[str]):
+        """
+        Compute prediction given the text
+        :param line: text in input
+        :return: the prediction of the model
+        """
         example = self.tokenizer.encode_plus(
-            line,
+            [c for c in line],
             return_token_type_ids=True,
             return_attention_mask=True,
             return_tensors="pt",
@@ -72,10 +87,14 @@ class PredictorLSTM(Predictor):
         self.vocab = DatasetLSTM.vocab_from_w2v(self.model.word_vectors)
         self.model = self.model.to(self.device)
 
-    def _get_predictions(self, line: Sequence[str]):
-        line = "".join(line)
-        example = DatasetLSTM._process_text(line, self.model_max_length, pad=False)
-        example = [DatasetLSTM._encode_sequence(e, self.vocab) for e in example]
+    def _get_predictions(self, line: str):
+        """
+        Compute prediction given the text
+        :param line: text in input
+        :return: the prediction of the model
+        """
+        example = DatasetLSTM.process_text(line, self.model_max_length, pad=False)
+        example = [DatasetLSTM.encode_sequence(e, self.vocab) for e in example]
         example = [torch.tensor(e, device=self.device).unsqueeze(0) for e in example]
         prediction = self.model(example, training=False)[0]
         prediction = self.softmax_fn(prediction).cpu().data.numpy()
