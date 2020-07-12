@@ -1,8 +1,6 @@
 import unicodedata
 from typing import List, Sequence
 
-import gensim
-
 
 def preprocess_file(filename: str, output_no_space: str, output_bies: str):
     """
@@ -93,11 +91,6 @@ def read_dataset(filename: str) -> List[str]:
         return [line for line in f if line]
 
 
-def convert_w2v_to_binary(input_file, output_file):
-    word_vectors = gensim.models.KeyedVectors.load_word2vec_format(input_file)
-    word_vectors.save_word2vec_format(output_file, binary=True)
-
-
 def timer(start: float, end: float):
     """
     Timer function. Compute execution time from strart to end (end - start)
@@ -108,9 +101,3 @@ def timer(start: float, end: float):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
     return "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
-
-
-if __name__ == "__main__":
-    convert_w2v_to_binary(
-        "resources/bigram_unigram300.txt", "resources/bigram_unigram300.bin"
-    )

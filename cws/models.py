@@ -45,10 +45,6 @@ class ChineseSegmenter(pl.LightningModule):
         )
         self.train_set, self.val_set = self._split_data(self.data)
 
-    def freeze_lm(self, lmodel):
-        for param in lmodel.base_model.parameters():
-            param.requires_grad = False
-
     def forward(self, inputs, *args, **kwargs):
         outputs = self.lmodel(**inputs)
         if self.hparams.bert_mode == "none":
@@ -165,6 +161,11 @@ class ChineseSegmenter(pl.LightningModule):
         print("Val size:", val_len)
         return torch.utils.data.random_split(data, [train_len, val_len])
 
+    @staticmethod
+    def freeze_lm(lmodel):
+        for param in lmodel.base_model.parameters():
+            param.requires_grad = False
+    
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)

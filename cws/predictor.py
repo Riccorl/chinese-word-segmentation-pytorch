@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from typing import List
+from typing import List, Sequence
 
 import numpy as np
 import torch
@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from dataset import Dataset, DatasetLM, DatasetLSTM
 from models import ChineseSegmenter, ChineseSegmenterLSTM
+import abc
 
 
 class Predictor:
@@ -36,9 +37,13 @@ class Predictor:
         ]
         return words_pred
 
+    @abc.abstractmethod
+    def _get_predictions(self, line: str) -> np.array:
+        pass
+
 
 class PredictorLM(Predictor):
-    def __init__(self, model_path):
+    def __init__(self, model_path: str):
         super().__init__()
         self.model = ChineseSegmenter.load_from_checkpoint(model_path)
         self.tokenizer = tr.BertTokenizer.from_pretrained(
@@ -46,7 +51,7 @@ class PredictorLM(Predictor):
         )
         self.model = self.model.to(self.device)
 
-    def _get_predictions(self, line):
+    def _get_predictions(self, line: Sequence[str]):
         example = self.tokenizer.encode_plus(
             line,
             return_token_type_ids=True,
@@ -61,13 +66,13 @@ class PredictorLM(Predictor):
 
 
 class PredictorLSTM(Predictor):
-    def __init__(self, model_path):
+    def __init__(self, model_path: str):
         super().__init__()
         self.model = ChineseSegmenterLSTM.load_from_checkpoint(model_path)
         self.vocab = DatasetLSTM.vocab_from_w2v(self.model.word_vectors)
         self.model = self.model.to(self.device)
 
-    def _get_predictions(self, line):
+    def _get_predictions(self, line: Sequence[str]):
         line = "".join(line)
         example = DatasetLSTM._process_text(line, self.model_max_length, pad=False)
         example = [DatasetLSTM._encode_sequence(e, self.vocab) for e in example]

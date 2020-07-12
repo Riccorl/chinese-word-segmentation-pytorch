@@ -49,7 +49,7 @@ python cws/train.py \
     --gradient_clip_val 0.5 \
     --optimized_decay \
     --lr 0.001 \
-    --schedule \
+    # --schedule \
     # --freeze \
     # --embeddings_file $EMB \
 

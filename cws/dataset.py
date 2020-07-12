@@ -1,5 +1,6 @@
+import abc
 from itertools import chain, tee
-from typing import Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 import gensim
 import torch
@@ -59,6 +60,14 @@ class Dataset(torch.utils.data.Dataset):
             f = (line.strip() for line in file)
             return [line for line in f if line]
 
+    @abc.abstractmethod
+    def _process_text(self, text: str, *args) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def _convert_labels(self, bies_line: str, max_length: int) -> Sequence[int]:
+        pass
+
 
 class DatasetLM(Dataset):
     def __init__(
@@ -99,7 +108,9 @@ class DatasetLM(Dataset):
         return converted_line
 
     @staticmethod
-    def generate_batch(batch):
+    def generate_batch(
+        batch: Tuple[Dict[str, Sequence[int]], List[Sequence[int]]]
+    ) -> Tuple[Dict[str, Sequence[int]], List[Sequence[int]]]:
         input_ids = torch.tensor([b[0]["input_ids"] for b in batch])
         attention_mask = torch.tensor([b[0]["attention_mask"] for b in batch])
         token_type_ids = torch.tensor([b[0]["token_type_ids"] for b in batch])
@@ -176,7 +187,7 @@ class DatasetLSTM(Dataset):
         return DatasetLSTM.pairwise(chain(line, ["</s>"]))
 
     @staticmethod
-    def pairwise(iterable):
+    def pairwise(iterable: Sequence[Any]) -> Sequence[Any]:
         """
         Returns a list of paired items, overlapping, from the original.
         """
@@ -185,7 +196,9 @@ class DatasetLSTM(Dataset):
         return ["".join(t) for t in zip(a, b)]
 
     @staticmethod
-    def generate_batch(batch, vocab):
+    def generate_batch(
+        batch, vocab: Dict[str, int]
+    ) -> Tuple[Tuple[List[Sequence[int]]], List[Sequence[int]]]:
         input_unigrams = [DatasetLSTM._encode_sequence(b[0][0], vocab) for b in batch]
         input_bigrams = [DatasetLSTM._encode_sequence(b[0][1], vocab) for b in batch]
         input_unigrams = torch.tensor(input_unigrams)
@@ -194,5 +207,5 @@ class DatasetLSTM(Dataset):
         return (input_unigrams, input_bigrams), labels
 
     @staticmethod
-    def _encode_sequence(text: str, vocab: Dict):
+    def _encode_sequence(text: str, vocab: Dict) -> Sequence[int]:
         return [vocab[ngram] if ngram in vocab else vocab["<UNK>"] for ngram in text]
