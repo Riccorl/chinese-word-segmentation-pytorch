@@ -3,34 +3,29 @@
 # Chinese Word Segmentation
 
 ### Architecture
-The baseline architecture is based on the work of [Ma et al.](https://aclweb.org/anthology/D18-1529)
+The baseline architecture is based on the work of [Ma et al.](https://aclweb.org/anthology/D18-1529). An improved transformer-based architecture is also implemented.
 
-### Params
-LR = 0.000524
+The dataset can be downloaded from [here](http://sighan.cs.uchicago.edu/bakeoff2005/).
 
 ### Results
 
-#### bert-base-chinese
+|  Model | AS | CITYU | MSR | PKU |
+| --- | --- | --- | --- | --- |
+|  This work | 96.5 | 97.5 | 97.7 | 96.3 |
+|  [Ma et al. (2018)](http://aclweb.org/anthology/D18-1529) | 96.2 | 97.2 | 97.4 | 96.1 |
 
-* pku epoch 2
-    ```
-    **Adam**
-    === TOTAL TRUE WORDS RECALL:    0.958
-    === TOTAL TEST WORDS PRECISION: 0.967
-    === F MEASURE:  0.963
-    0.962667
-    ```
+### Run
 
+The train script is in `cws/train.py`. Run this to see all the input parameters
 
-#### voidful/albert_chinese_tiny
+```python
+python cws/train.py -h
+```
 
-* pku 
-    ```
-    simple model
-    Adam
-    epoch 2
-    === TOTAL TRUE WORDS RECALL:    0.936
-    === TOTAL TEST WORDS PRECISION: 0.937
-    === F MEASURE:  0.937
-    0.936667
-    ```
+You can generate segmented sentences by running `cws/predictor.py`.
+
+```python
+python cws/predictor.py -h
+```
+
+The evaluation uses the official scripts, in `scripts/score`.
